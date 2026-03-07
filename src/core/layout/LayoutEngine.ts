@@ -1,0 +1,109 @@
+import type { TextBlock, PageModel } from '../../types/document';
+import type { IFontManager } from '../interfaces/IFontManager';
+import type { ILayoutEngine } from '../interfaces/ILayoutEngine';
+import { GreedyLineBreaker } from './GreedyLineBreaker';
+import { KnuthPlassLineBreaker } from './KnuthPlassLineBreaker';
+import { ParagraphLayout } from './ParagraphLayout';
+import type { LineBreaker } from './ParagraphLayout';
+import { OverflowHandler } from './OverflowHandler';
+
+export class LayoutEngine implements ILayoutEngine {
+  private strategy: 'greedy' | 'knuth-plass' = 'greedy';
+  private greedyBreaker = new GreedyLineBreaker();
+  private knuthPlassBreaker = new KnuthPlassLineBreaker();
+  private paragraphLayout = new ParagraphLayout();
+  private overflowHandler = new OverflowHandler();
+
+  setStrategy(strategy: 'greedy' | 'knuth-plass'): void {
+    this.strategy = strategy;
+  }
+
+  getStrategy(): 'greedy' | 'knuth-plass' {
+    return this.strategy;
+  }
+
+  reflowTextBlock(block: TextBlock, fontManager: IFontManager, options?: { autoGrow?: boolean }): TextBlock {
+    const lineBreaker = this.getLineBreaker();
+    const maxWidth = block.bounds.width;
+
+    // Layout each paragraph
+    let currentY = 0;
+    const paragraphs = block.paragraphs.map(paragraph => {
+      const lines = this.paragraphLayout.layoutParagraph(
+        paragraph, maxWidth, fontManager, lineBreaker, currentY,
+      );
+      if (lines.length > 0) {
+        const lastLine = lines[lines.length - 1];
+        currentY = lastLine.y + lastLine.height;
+      }
+      return { ...paragraph, lines };
+    });
+
+    let updatedBlock: TextBlock = { ...block, paragraphs };
+
+    if (options?.autoGrow) {
+      // Auto-grow: expand bounds to fit content, skip overflow handling
+      const contentHeight = currentY;
+      const contentWidth = this.computeMaxLineWidth(paragraphs);
+      const newBounds = { ...block.bounds };
+      if (contentHeight > newBounds.height) {
+        newBounds.height = contentHeight;
+      }
+      if (contentWidth > newBounds.width) {
+        newBounds.width = contentWidth;
+      }
+      updatedBlock = { ...updatedBlock, bounds: newBounds, overflowState: { status: 'normal' } };
+      return updatedBlock;
+    }
+
+    // Handle overflow detection and auto-shrink
+    updatedBlock = this.overflowHandler.detectAndHandle(updatedBlock, fontManager, lineBreaker);
+
+    // If auto-shrunk, we need to re-layout with the adjusted paragraphs
+    if (updatedBlock.overflowState.status === 'auto_shrunk') {
+      currentY = 0;
+      const relaidParagraphs = updatedBlock.paragraphs.map(paragraph => {
+        const lines = this.paragraphLayout.layoutParagraph(
+          paragraph, maxWidth, fontManager, lineBreaker, currentY,
+        );
+        if (lines.length > 0) {
+          const lastLine = lines[lines.length - 1];
+          currentY = lastLine.y + lastLine.height;
+        }
+        return { ...paragraph, lines };
+      });
+      updatedBlock = { ...updatedBlock, paragraphs: relaidParagraphs };
+    }
+
+    return updatedBlock;
+  }
+
+  private computeMaxLineWidth(paragraphs: { lines?: import('../../types/document').LayoutLine[] }[]): number {
+    let maxWidth = 0;
+    for (const p of paragraphs) {
+      if (!p.lines) continue;
+      for (const line of p.lines) {
+        if (line.glyphs.length === 0) continue;
+        const lastGlyph = line.glyphs[line.glyphs.length - 1];
+        const lineWidth = lastGlyph.x + lastGlyph.width;
+        if (lineWidth > maxWidth) maxWidth = lineWidth;
+      }
+    }
+    return maxWidth;
+  }
+
+  reflowPage(page: PageModel, fontManager: IFontManager): PageModel {
+    const elements = page.elements.map(element => {
+      if (element.type === 'text') {
+        return this.reflowTextBlock(element, fontManager);
+      }
+      return element;
+    });
+
+    return { ...page, elements, dirty: false };
+  }
+
+  private getLineBreaker(): LineBreaker {
+    return this.strategy === 'greedy' ? this.greedyBreaker : this.knuthPlassBreaker;
+  }
+}

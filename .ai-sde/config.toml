@@ -1,0 +1,15 @@
+# version: "0.0.5-9"
+# AI SDE Config Description:
+# port: Dashboard port used when workflow auto-starts it
+# lang: Default language for model output and docs (e.g., "en" or "zh")
+# approvalMode: "dashboard" (default) or "cli"
+# codeReview: Enable manual code review (true) or auto-proceed (false)
+# userCustomDir: Directory for user custom files (user-templates, user-hooks, user-knowledge), relative to .ai-sde
+# useRemoteD2C4Android: Enable remote D2C pipeline for Android (Figma -> code via d2c4a MCP). iOS is unaffected.
+
+port = 8081
+lang = "zh"
+approvalMode = "dashboard"
+codeReview = false
+userCustomDir = "."
+useRemoteD2C4Android = false
