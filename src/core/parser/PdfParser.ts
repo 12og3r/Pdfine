@@ -8,7 +8,7 @@ import { ImageExtractor } from './ImageExtractor'
 import { PathExtractor } from './PathExtractor'
 import { Logger } from '../infra/Logger'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.mjs`;
 
 const logger = new Logger('PdfParser');
 
