@@ -112,7 +112,7 @@ export function Hero() {
         } as React.CSSProperties}
       >
         Edit PDFs,{' '}
-        <span className="gradient-text" style={{ fontStyle: 'italic' }}>
+        <span className="gradient-text" style={{ fontStyle: 'italic', paddingRight: '0.05em' }}>
           beautifully
         </span>
         <span style={{ color: 'var(--accent)' }}>.</span>
