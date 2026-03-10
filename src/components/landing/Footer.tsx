@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="w-full max-w-screen-xl mx-auto" style={{ padding: '40px 32px' }}>
+    <footer className="w-full" style={{ padding: '40px 32px' }}>
       <div
         style={{
           height: '1px',

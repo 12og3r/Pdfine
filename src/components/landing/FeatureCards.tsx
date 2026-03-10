@@ -18,7 +18,7 @@ export function FeatureCards() {
   return (
     <section
       ref={sectionRef}
-      className="w-full max-w-screen-xl mx-auto"
+      className="w-full"
       style={{ padding: '80px 32px' }}
     >
       {/* Section header */}

@@ -13,7 +13,7 @@ Main landing page layout. Orchestrates all sub-components.
 - Sections: Nav -> Hero -> UploadWidget -> TrustSignals -> FeatureCards -> HowItWorks -> Footer
 - Nav logo uses `var(--gradient-accent)` background with indigo glow
 - GitHub link has hover state with accent-soft background and border-accent
-- All content areas use `max-w-screen-xl mx-auto` (1280px max)
+- All content areas use full width (`w-full`) — no max-width constraint
 - Inline `style={{}}` for all spacing (avoids Tailwind v4 reset issues)
 
 ### Hero.tsx

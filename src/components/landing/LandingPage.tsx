@@ -35,7 +35,7 @@ export function LandingPage({ editorCore }: LandingPageProps) {
     <div className="lumen-bg noise-bg w-full min-h-full overflow-y-auto overflow-x-hidden relative">
       {/* ===== Navigation ===== */}
       <nav
-        className="relative z-20 w-full flex justify-between items-center max-w-screen-xl mx-auto"
+        className="relative z-20 w-full flex justify-between items-center"
         style={{ padding: '24px 32px' }}
       >
         <div className="flex items-center gap-2.5">
@@ -86,7 +86,7 @@ export function LandingPage({ editorCore }: LandingPageProps) {
 
       {/* ===== Hero Section ===== */}
       <div
-        className="relative z-10 w-full max-w-screen-xl mx-auto flex flex-col items-center"
+        className="relative z-10 w-full flex flex-col items-center"
         style={{ padding: '64px 32px 96px' }}
       >
         <Hero />
