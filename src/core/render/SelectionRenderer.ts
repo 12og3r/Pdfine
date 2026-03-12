@@ -61,6 +61,7 @@ export class SelectionRenderer {
     const lineGroups = new Map<number, PositionedGlyph[]>();
     for (let i = start; i < end && i < glyphs.length; i++) {
       const g = glyphs[i];
+      if (!g) continue; // skip \n between paragraphs
       const lineY = g.y; // top of glyph (with textBaseline='top')
       // Find existing line group within threshold
       let foundKey: number | null = null;
@@ -110,13 +111,34 @@ export class SelectionRenderer {
     ctx.restore();
   }
 
-  private collectGlyphs(block: TextBlock): PositionedGlyph[] {
-    const result: PositionedGlyph[] = [];
-    for (const paragraph of block.paragraphs) {
+  /**
+   * Collects glyphs indexed by getTextContent offset (includes \n for paragraph breaks
+   * and \n within runs for original PDF line breaks).
+   * Returns a sparse-like array where \n positions have undefined entries.
+   */
+  private collectGlyphs(block: TextBlock): (PositionedGlyph | undefined)[] {
+    const result: (PositionedGlyph | undefined)[] = [];
+    for (let pi = 0; pi < block.paragraphs.length; pi++) {
+      if (pi > 0) result.push(undefined); // \n between paragraphs
+      const paragraph = block.paragraphs[pi];
       if (!paragraph.lines) continue;
+      // Build a flat glyph array from all lines
+      const allGlyphs: PositionedGlyph[] = [];
       for (const line of paragraph.lines) {
         for (const glyph of line.glyphs) {
-          result.push(glyph);
+          allGlyphs.push(glyph);
+        }
+      }
+      // Walk through run text, matching glyphs to visible chars
+      let glyphIdx = 0;
+      for (const run of paragraph.runs) {
+        for (let ci = 0; ci < run.text.length; ci++) {
+          if (run.text[ci] === '\n') {
+            result.push(undefined);
+          } else {
+            result.push(allGlyphs[glyphIdx] ?? undefined);
+            glyphIdx++;
+          }
         }
       }
     }

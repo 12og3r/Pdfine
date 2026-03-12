@@ -1,4 +1,4 @@
-# version: "0.0.5-9"
+# version: "0.0.6-3"
 # AI SDE Config Description:
 # port: Dashboard port used when workflow auto-starts it
 # lang: Default language for model output and docs (e.g., "en" or "zh")

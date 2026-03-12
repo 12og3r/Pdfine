@@ -19,6 +19,8 @@ Tracks cursor position (pageIdx, blockId, charOffset) and handles navigation.
 - `getCursorPosition()` — returns screen coordinates using glyph layout data
 - Emits `cursorMoved` on every position change
 - Vertical movement preserves X position by finding closest glyph
+- **Offset accounting**: `getGlyphAtOffset()`, `findCurrentLine()`, `moveVertical()` all account for `\n` between paragraphs AND `\n` within runs (inter-line breaks from PDF parsing) to stay consistent with `getTextContent()` / `getRunAtOffset()`
+- Helper methods: `countNewlinesInRuns()`, `getParaTextLength()`, `getLineOffsetRanges()` compute text-offset-aware line boundaries
 
 ### SelectionManager.ts
 Manages text selection ranges within a single block.
@@ -54,6 +56,7 @@ Command execution and inversion logic. All text model mutations happen here.
 - `getRunAtOffset(block, offset)` — locates run for global character offset
 - Handles paragraph splitting (newlines) and merging (cross-paragraph deletes)
 - Supports: INSERT_TEXT, DELETE_TEXT, REPLACE_TEXT, CHANGE_STYLE, BATCH
+- Maintains `pdfCharWidths` array consistency: splices on insert (NaN for new chars), delete, and run splitting
 
 ### index.ts
 Barrel exports for public API.
@@ -82,3 +85,4 @@ Global offset = sum of characters in earlier paragraphs + 1 per paragraph bounda
 - CursorManager needs populated layout data (LayoutEngine must run first)
 - Empty blocks always keep 1 paragraph with 1 empty run
 - Merge is aggressive — check `breakMerge()` calls if undo grouping is wrong
+- **CRITICAL: Offset consistency** — All code iterating through glyphs MUST account for `\n` between paragraphs (`if (pi > 0) globalIdx++`) AND `\n` within runs (inter-line breaks that have no glyphs) to match `getTextContent()`'s offset space. HitTester, CursorManager, and SelectionRenderer all do this by walking through run text and skipping `\n` characters when matching glyphs.

@@ -65,6 +65,8 @@ export class HitTester {
     const by = block.bounds.y;
 
     for (let pIdx = 0; pIdx < block.paragraphs.length; pIdx++) {
+      // Account for \n between paragraphs (consistent with getTextContent)
+      if (pIdx > 0) globalCharOffset++;
       const paragraph = block.paragraphs[pIdx];
       if (!paragraph.lines) continue;
 
@@ -87,6 +89,23 @@ export class HitTester {
         };
 
         for (const _glyph of line.glyphs) {
+          // Skip over any \n characters in the run text (they have no glyphs)
+          while (
+            runIdx < paragraph.runs.length &&
+            charInRun < paragraph.runs[runIdx].text.length &&
+            paragraph.runs[runIdx].text[charInRun] === '\n'
+          ) {
+            globalCharOffset++;
+            charInRun++;
+            while (
+              runIdx < paragraph.runs.length &&
+              charInRun >= paragraph.runs[runIdx].text.length
+            ) {
+              charInRun -= paragraph.runs[runIdx].text.length;
+              runIdx++;
+            }
+          }
+
           glyphLocations.push({
             paragraphIdx: pIdx,
             runIdx,
@@ -106,6 +125,23 @@ export class HitTester {
         }
 
         lines.push({ line: adjustedLine, glyphLocations, blockId: block.id });
+      }
+
+      // Skip any trailing \n characters after the last line's glyphs
+      while (
+        runIdx < paragraph.runs.length &&
+        charInRun < paragraph.runs[runIdx].text.length &&
+        paragraph.runs[runIdx].text[charInRun] === '\n'
+      ) {
+        globalCharOffset++;
+        charInRun++;
+        while (
+          runIdx < paragraph.runs.length &&
+          charInRun >= paragraph.runs[runIdx].text.length
+        ) {
+          charInRun -= paragraph.runs[runIdx].text.length;
+          runIdx++;
+        }
       }
     }
   }
@@ -216,10 +252,12 @@ export class HitTester {
 
     // Linear search for the glyph by x
     let glyphIdx = lineGlyphs.length - 1; // default to last
+    let pastLastGlyph = true;
     for (let i = 0; i < lineGlyphs.length; i++) {
       const glyph = lineGlyphs[i];
       if (x < glyph.x + glyph.width / 2) {
         glyphIdx = i;
+        pastLastGlyph = false;
         break;
       }
     }
@@ -227,12 +265,15 @@ export class HitTester {
     const loc = entry.glyphLocations[glyphIdx];
     if (!loc) return null;
 
+    // If clicking past the last glyph's midpoint, position cursor AFTER that character
+    const charOffset = pastLastGlyph ? loc.charOffset + 1 : loc.charOffset;
+
     return {
       pageIdx,
       blockId: entry.blockId,
       paragraphIdx: loc.paragraphIdx,
       runIdx: loc.runIdx,
-      charOffset: loc.charOffset,
+      charOffset,
       elementType: 'text',
     };
   }

@@ -1,4 +1,4 @@
-import type { Paragraph, LayoutLine, PositionedGlyph, TextStyle } from '../../types/document';
+import type { Paragraph, TextRun, LayoutLine, PositionedGlyph, TextStyle } from '../../types/document';
 import type { IFontManager } from '../interfaces/IFontManager';
 import type { CharInfo } from './GreedyLineBreaker';
 import { TextMeasurer } from './TextMeasurer';
@@ -17,7 +17,7 @@ export class ParagraphLayout {
     lineBreaker: LineBreaker,
     startY: number,
   ): LayoutLine[] {
-    const chars = this.flattenRuns(paragraph);
+    const chars = this.flattenRuns(paragraph, fontManager);
     if (chars.length === 0) {
       // Empty paragraph - produce a single empty line
       const defaultStyle = paragraph.runs[0]?.style;
@@ -70,7 +70,7 @@ export class ParagraphLayout {
       let contentWidth = 0;
       for (const c of trimmedChars) {
         const ls = c.style.letterSpacing ?? 0;
-        contentWidth += this.measurer.measureChar(c.char, c.style.fontId, c.style.fontSize, fontManager, ls);
+        contentWidth += this.measurer.measureChar(c.char, c.style.fontId, c.style.fontSize, fontManager, ls, c.pdfWidth);
       }
 
       // Position glyphs based on alignment
@@ -92,14 +92,69 @@ export class ParagraphLayout {
     return lines;
   }
 
-  private flattenRuns(paragraph: Paragraph): CharInfo[] {
+  private flattenRuns(paragraph: Paragraph, fontManager: IFontManager): CharInfo[] {
     const chars: CharInfo[] = [];
     for (const run of paragraph.runs) {
-      for (const char of run.text) {
-        chars.push({ char, style: run.style });
+      // If the run has pdfRunWidth but no pdfCharWidths, compute proportional
+      // per-char widths by scaling canvas-measured widths to match the PDF total.
+      if (run.pdfRunWidth !== undefined && run.pdfRunWidth > 0 && !run.pdfCharWidths) {
+        const proportionalWidths = this.computeProportionalWidths(run, fontManager);
+        run.pdfCharWidths = proportionalWidths;
+        run.pdfRunWidth = undefined;
+        for (let i = 0; i < run.text.length; i++) {
+          chars.push({
+            char: run.text[i],
+            style: run.style,
+            pdfWidth: proportionalWidths[i],
+          });
+        }
+      } else {
+        for (let i = 0; i < run.text.length; i++) {
+          const pdfWidth = run.pdfCharWidths?.[i];
+          chars.push({
+            char: run.text[i],
+            style: run.style,
+            pdfWidth: (pdfWidth !== undefined && !isNaN(pdfWidth)) ? pdfWidth : undefined,
+          });
+        }
       }
     }
     return chars;
+  }
+
+  /**
+   * Compute proportional per-character widths by scaling canvas-measured widths
+   * to match the PDF's total run width. This preserves character width ratios
+   * (e.g., 'V' wider than 'i') while matching the PDF's overall width.
+   */
+  private computeProportionalWidths(run: TextRun, fontManager: IFontManager): number[] {
+    const { text, style } = run;
+    const pdfRunWidth = run.pdfRunWidth!;
+
+    // Measure each character with canvas (newlines get zero width)
+    const canvasWidths: number[] = [];
+    let canvasTotal = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '\n') {
+        canvasWidths.push(0);
+      } else {
+        const w = fontManager.measureChar(text[i], style.fontId, style.fontSize);
+        canvasWidths.push(w);
+        canvasTotal += w;
+      }
+    }
+
+    // If canvas total is zero (e.g., all zero-width chars), fall back to uniform
+    // but still keep newlines at zero
+    if (canvasTotal === 0) {
+      const visibleCount = text.split('').filter(c => c !== '\n').length;
+      const uniform = visibleCount > 0 ? pdfRunWidth / visibleCount : 0;
+      return canvasWidths.map((_, i) => text[i] === '\n' ? 0 : uniform);
+    }
+
+    // Scale each character proportionally (newlines stay at zero)
+    const scaleFactor = pdfRunWidth / canvasTotal;
+    return canvasWidths.map(w => w * scaleFactor);
   }
 
   private getDominantStyle(chars: CharInfo[]): TextStyle {
@@ -147,9 +202,9 @@ export class ParagraphLayout {
     }
 
     let x = startX;
-    for (const { char, style } of chars) {
+    for (const { char, style, pdfWidth } of chars) {
       const ls = style.letterSpacing ?? 0;
-      const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, ls);
+      const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, ls, pdfWidth);
       const charHeight = style.fontSize;
       const charBaseline = this.measurer.getBaseline(style.fontSize, style.fontId, fontManager);
 

@@ -36,8 +36,11 @@ export class FontManager implements IFontManager {
     for (const font of extractedFonts) {
       this.fonts.set(font.id, font);
 
-      // Register via FontFace API if we have font data and it's an editable format
-      if (font.data && font.editable) {
+      // Skip registration if pdfjs already registered the font (fontFace set by extractor)
+      if (font.fontFace) {
+        logger.info(`Font already registered by pdfjs: ${font.name} (${font.id})`);
+      } else if (font.data && font.editable) {
+        // Register via FontFace API if we have font data and it's an editable format
         try {
           const fontFace = new FontFace(font.id, font.data, {
             weight: String(font.weight),
@@ -99,6 +102,26 @@ export class FontManager implements IFontManager {
 
     this.charWidthCache.set(cacheKey, width);
     return width;
+  }
+
+  /**
+   * Get the font's ascent in CSS pixels for a given fontSize.
+   * Uses opentype.js metrics when available, falls back to Canvas TextMetrics API.
+   */
+  getAscent(fontId: string, fontSize: number): number {
+    const metrics = this.getMetrics(fontId)
+    if (metrics) {
+      return metrics.ascender * (fontSize / metrics.unitsPerEm)
+    }
+    // Fallback: use Canvas TextMetrics (fontBoundingBoxAscent)
+    const fontString = this.buildFontString(fontId, fontSize)
+    this.measureCtx.font = fontString
+    const tm = this.measureCtx.measureText('M')
+    if (typeof (tm as any).fontBoundingBoxAscent === 'number') {
+      return (tm as any).fontBoundingBoxAscent
+    }
+    // Last resort
+    return fontSize * 0.8
   }
 
   getAvailableFonts(): FontInfo[] {

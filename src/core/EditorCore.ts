@@ -75,6 +75,9 @@ export class EditorCore implements IEditorCore {
       // Extract and register fonts
       await this.fontManager.extractAndRegister(pdfDoc)
       this.documentModel.fonts = this.fontManager.getFontMap()
+
+      // Provide font manager to render engine so TextRenderer can use registered fonts
+      this.renderEngine.setFontManager(this.fontManager)
     }
 
     // Initial layout for all pages
@@ -84,6 +87,13 @@ export class EditorCore implements IEditorCore {
         this.fontManager
       )
     }
+
+    // Adjust text block bounds to align Canvas rendering with PDF rendering.
+    // TextBlockBuilder computes bounds.y = baseline - fontSize, but the actual
+    // visual top of text is at baseline - ascent (from font metrics). The offset
+    // (fontSize - ascent) causes vertical misalignment between Canvas fillText
+    // and pdfjs rasterization. Correcting bounds.y here closes that gap.
+    this.adjustBoundsToFontAscent(this.documentModel)
 
     // Set up edit engine
     this.editEngine = new EditEngine(
@@ -525,6 +535,28 @@ export class EditorCore implements IEditorCore {
 
   // =============== Internal ===============
 
+  /**
+   * Adjust text block bounds.y to use font ascender instead of fontSize.
+   * TextBlockBuilder sets bounds.y = baseline - fontSize (approximate text top),
+   * but the actual visual top is baseline - ascent. The difference causes
+   * Canvas fillText to render vertically offset from pdfjs rasterization.
+   */
+  private adjustBoundsToFontAscent(doc: DocumentModel): void {
+    for (const page of doc.pages) {
+      for (const el of page.elements) {
+        if (el.type !== 'text') continue
+        const firstRun = el.paragraphs[0]?.runs[0]
+        if (!firstRun) continue
+        const { fontSize, fontId } = firstRun.style
+        const ascent = this.fontManager.getAscent(fontId, fontSize)
+        const offset = fontSize - ascent
+        if (Math.abs(offset) < 0.1) continue
+        el.bounds = { ...el.bounds, y: el.bounds.y + offset, height: el.bounds.height - offset }
+        el.originalBounds = { ...el.originalBounds, y: el.originalBounds.y + offset, height: el.originalBounds.height - offset }
+      }
+    }
+  }
+
   private setupEventListeners(): void {
     this.eventBus.on('textChanged', ({ pageIdx, blockId }) => {
       if (!this.documentModel) return
@@ -566,6 +598,25 @@ export class EditorCore implements IEditorCore {
 
     this.eventBus.on('editStart', ({ blockId }) => {
       this.renderEngine.setEditingBlockId(blockId)
+
+      // Re-run reflow so canvas-rendered text uses the same layout that
+      // subsequent type+delete cycles will produce.  With the \n preservation
+      // fix in TextBlockBuilder the greedy line breaker now reproduces the
+      // original line breaks, so this is safe.
+      if (this.documentModel) {
+        const page = this.documentModel.pages[this.currentPage]
+        if (page) {
+          for (let i = 0; i < page.elements.length; i++) {
+            const el = page.elements[i]
+            if (el.type === 'text' && el.id === blockId) {
+              page.elements[i] = this.layoutEngine.reflowTextBlock(el, this.fontManager)
+              break
+            }
+          }
+        }
+      }
+
+      this.renderEngine.markEditingBlockDirty()
       this.render()
     })
 

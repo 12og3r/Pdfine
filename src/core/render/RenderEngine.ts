@@ -1,4 +1,5 @@
 import type { IRenderEngine } from '../interfaces/IRenderEngine';
+import type { IFontManager } from '../interfaces/IFontManager';
 import type { PageModel, Rect, TextBlock, OverlayElement } from '../../types/document';
 import type { Viewport, HitTestResult, CursorPosition, SelectionRange } from '../../types/ui';
 import { TextRenderer } from './TextRenderer';
@@ -33,6 +34,10 @@ export class RenderEngine implements IRenderEngine {
 
   // Callback to trigger re-render when async PDF page rendering completes
   private onNeedRerender: (() => void) | null = null;
+
+  setFontManager(fontManager: IFontManager): void {
+    this.textRenderer.setFontManager(fontManager);
+  }
 
   getPdfPageRenderer(): PdfPageRenderer {
     return this.pdfPageRenderer;
@@ -161,15 +166,22 @@ export class RenderEngine implements IRenderEngine {
       const isEditingDirty = el.id === this.editingBlockId && this.editingBlockDirty;
       if (el.type === 'text' && (isEditingDirty || this.modifiedBlockIds.has(el.id))) {
         // Draw white overlay to hide original PDF text for this block.
-        // Use generous padding: bounds may not fully cover descenders (below baseline)
-        // or ascent variations (above top). Pad by ~30% of block height or at least 4px.
-        const pad = Math.max(4, el.bounds.height * 0.3) * scale;
+        // Use the union of current bounds and originalBounds so the overlay
+        // covers both the pdfjs-rendered text (at original positions) and the
+        // canvas-redrawn text (at possibly shifted positions after reflow).
+        const ob = el.originalBounds;
+        const ux = Math.min(el.bounds.x, ob.x);
+        const uy = Math.min(el.bounds.y, ob.y);
+        const uw = Math.max(el.bounds.x + el.bounds.width, ob.x + ob.width) - ux;
+        const uh = Math.max(el.bounds.y + el.bounds.height, ob.y + ob.height) - uy;
+        const fontSize = el.paragraphs[0]?.runs[0]?.style.fontSize ?? 12;
+        const pad = Math.max(4, fontSize) * scale;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(
-          el.bounds.x * scale - pad,
-          el.bounds.y * scale - pad,
-          el.bounds.width * scale + pad * 2,
-          el.bounds.height * scale + pad * 2
+          ux * scale - pad,
+          uy * scale - pad,
+          uw * scale + pad * 2,
+          uh * scale + pad * 2
         );
         // Render editing highlight OVER the white overlay, UNDER the text
         if (el.id === this.editingBlockId) {

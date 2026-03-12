@@ -201,3 +201,4 @@ All frontend UI uses the "Lumen" design system defined in `src/index.css`. Light
 - Only TrueType/OpenType fonts are editable (Type1/CIDFont fall back to system fonts)
 - Text aggregation is heuristic-based (may fail on complex multi-column layouts)
 - Canvas rendering has ±1-2px subpixel variance
+- On edit mode entry, text block bounds are adjusted (fontSize→ascent) to minimize vertical shift between pdfjs raster and Canvas fillText rendering

@@ -12,8 +12,8 @@ Main orchestrator implementing `IRenderEngine`.
 - `hitTest()` — delegates to HitTester
 - `getPageOffset()` — returns page position for mouse→page coord conversion, accounts for scroll offsets
 - Tracks modified blocks to preserve edited text after exiting edit mode
-- Defers white overlay + re-render until editing block has actual content changes (`editingBlockDirty` flag)
-- `markEditingBlockDirty()` — called by EditorCore on text changes to activate overlay rendering
+- White overlay + canvas re-render activates when `editingBlockDirty` is true
+- `markEditingBlockDirty()` — called by EditorCore on both edit mode entry and text changes to activate overlay rendering
 - Hover/editing highlights: renders rounded-rect backgrounds for hovered (`TEXT_HOVER_BG_COLOR`) and editing (`TEXT_EDITING_BG_COLOR`) editable text blocks
 - `setHoveredBlockId()` / `getHoveredBlockId()` — manages hover state for text block highlighting
 
@@ -25,10 +25,13 @@ Async PDF page background rendering via pdfjs-dist.
 
 ### TextRenderer.ts
 Renders text blocks glyph-by-glyph.
-- Font mapping heuristics: recognizes Courier, Times, Arial, Helvetica, etc.
+- **Font resolution**: `resolveFontFamily()` checks `IFontManager` for registered FontFace first, falls back to CSS heuristics via `mapFontFamily()`
+- Constructor accepts optional `IFontManager`; also settable via `setFontManager()`
+- `RenderEngine.setFontManager()` wires the font manager from EditorCore after PDF loading
+- Font mapping heuristics (fallback only): recognizes Courier, Times, Arial, Helvetica, etc.
 - Pixel alignment via `alignPixel()` for sharp HiDPI rendering
 - Renders overflow warning borders (OVERFLOW_BORDER_COLOR)
-- Text baseline: 'top'
+- Text baseline: 'alphabetic' — positions glyphs at their baseline (glyph.y + ascent) for precise alignment with pdfjs rasterization; `getGlyphAscent()` helper queries IFontManager for per-glyph ascent
 
 ### ImageRenderer.ts
 Renders images with rotation support.
@@ -44,6 +47,7 @@ Renders SVG-style path commands (M/L/C/Z).
 ### SelectionRenderer.ts
 Renders selection highlights and blinking cursor.
 - Selection: solid color rectangles over selected glyphs, grouped by line
+- `collectGlyphs()` accounts for `\n` between paragraphs and `\n` within runs (inter-line breaks) by inserting undefined placeholders, so selection offsets match `getTextContent()` offset space
 - Cursor: 2px vertical line with blink timer (CURSOR_BLINK_INTERVAL_MS)
 
 ### HitTester.ts
@@ -51,6 +55,7 @@ Spatial indexing for click detection.
 - `buildHitMap()` — indexes all elements (rebuilt each render)
 - Hit test order (front-to-back): overlays → text → images → paths
 - Text: binary search on Y-sorted lines, linear search on glyphs within line
+- `indexTextBlock()` accounts for `\n` between paragraphs and `\n` within runs (inter-line breaks) in `globalCharOffset` so returned offsets match `getTextContent()` offset space
 - Returns HitTestResult with element and glyph location
 
 ### OverlayManager.ts
@@ -82,7 +87,7 @@ Barrel exports.
 - `types/document` — PageModel, TextBlock, ImageElement, PathElement, OverlayElement
 - `types/ui` — Viewport, HitTestResult, CursorPosition, SelectionRange
 - `config/constants` — SELECTION_COLOR, CURSOR_COLOR, CURSOR_BLINK_INTERVAL_MS, OVERFLOW_BORDER_COLOR, PAGE_MARGIN
-- `interfaces/IRenderEngine`
+- `interfaces/IRenderEngine`, `interfaces/IFontManager`
 - `pdfjs-dist` (PdfPageRenderer only)
 
 ## Developer Notes

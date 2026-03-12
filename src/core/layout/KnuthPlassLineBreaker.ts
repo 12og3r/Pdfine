@@ -47,7 +47,7 @@ export class KnuthPlassLineBreaker {
     const items: KPItem[] = [];
 
     for (let i = 0; i < chars.length; i++) {
-      const { char, style } = chars[i];
+      const { char, style, pdfWidth } = chars[i];
       const letterSpacing = style.letterSpacing ?? 0;
 
       if (char === '\n') {
@@ -57,7 +57,7 @@ export class KnuthPlassLineBreaker {
       }
 
       if (char === ' ') {
-        const spaceWidth = this.measurer.measureChar(' ', style.fontId, style.fontSize, fontManager, letterSpacing);
+        const spaceWidth = this.measurer.measureChar(' ', style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
         items.push({
           type: 'glue',
           index: i,
@@ -69,13 +69,13 @@ export class KnuthPlassLineBreaker {
       }
 
       if (char === '-') {
-        const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing);
+        const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
         items.push({ type: 'box', index: i, width: charWidth, char, style });
         items.push({ type: 'penalty', index: i + 1, width: 0, penalty: HYPHEN_PENALTY, flagged: true });
         continue;
       }
 
-      const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing);
+      const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
       items.push({ type: 'box', index: i, width: charWidth, char, style });
     }
 

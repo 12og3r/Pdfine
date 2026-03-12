@@ -1,4 +1,5 @@
 import type { TextBlock, Color } from '../../types/document';
+import type { IFontManager } from '../interfaces/IFontManager';
 import { OVERFLOW_BORDER_COLOR } from '../../config/constants';
 
 function colorToCSS(color: Color): string {
@@ -11,6 +12,16 @@ function alignPixel(value: number, dpr: number): number {
 }
 
 export class TextRenderer {
+  private fontManager: IFontManager | null;
+
+  constructor(fontManager?: IFontManager) {
+    this.fontManager = fontManager ?? null;
+  }
+
+  setFontManager(fontManager: IFontManager): void {
+    this.fontManager = fontManager;
+  }
+
   renderTextBlock(
     ctx: CanvasRenderingContext2D,
     block: TextBlock,
@@ -18,7 +29,7 @@ export class TextRenderer {
     dpr: number
   ): void {
     ctx.save();
-    ctx.textBaseline = 'top';
+    ctx.textBaseline = 'alphabetic';
 
     const bx = block.bounds.x;
     const by = block.bounds.y;
@@ -32,14 +43,18 @@ export class TextRenderer {
           const fontStyle = glyph.style.fontStyle === 'italic' ? 'italic' : '';
           const fontWeight = glyph.style.fontWeight;
 
-          // Map PDF font names to reasonable CSS font families
-          const fontFamily = this.mapFontFamily(glyph.style.fontId);
+          const fontFamily = this.resolveFontFamily(glyph.style.fontId);
           ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`.trim();
           ctx.fillStyle = colorToCSS(glyph.style.color);
 
-          // Add block offset to glyph position
+          // glyph.y is the top of the glyph area (lineY + lineBaseline - charAscent).
+          // With textBaseline='alphabetic', we need the baseline position:
+          //   baselineY = glyph.y + charAscent
+          // This bypasses differences between Canvas's 'top' metric and our
+          // opentype.js-based ascent, giving precise baseline alignment with pdfjs.
+          const charAscent = this.getGlyphAscent(glyph.style.fontId, glyph.style.fontSize);
           const px = alignPixel((bx + glyph.x) * scale, dpr);
-          const py = alignPixel((by + glyph.y) * scale, dpr);
+          const py = alignPixel((by + glyph.y + charAscent) * scale, dpr);
           ctx.fillText(glyph.char, px, py);
         }
       }
@@ -54,8 +69,35 @@ export class TextRenderer {
   }
 
   /**
+   * Get the font ascent for baseline positioning.
+   * Uses IFontManager.getAscent() (opentype.js metrics) when available.
+   */
+  private getGlyphAscent(fontId: string, fontSize: number): number {
+    if (this.fontManager) {
+      return this.fontManager.getAscent(fontId, fontSize);
+    }
+    return fontSize * 0.8;
+  }
+
+  /**
+   * Resolve font family for rendering. Priority:
+   * 1. If the font was registered via FontFace API, use its ID directly
+   * 2. Otherwise, fall back to CSS font family heuristics
+   */
+  private resolveFontFamily(fontId: string): string {
+    if (this.fontManager) {
+      const font = this.fontManager.getFont(fontId);
+      if (font?.fontFace) {
+        // Font was extracted from PDF and registered with the browser — use it directly
+        return `"${fontId}", sans-serif`;
+      }
+    }
+    return this.mapFontFamily(fontId);
+  }
+
+  /**
    * Map PDF internal font names to reasonable CSS font families.
-   * PDF fonts like "g_d0_f1_s0" are internal names that browsers don't know.
+   * Only used as fallback when the font is not registered via FontFace API.
    */
   private mapFontFamily(fontId: string): string {
     const lower = fontId.toLowerCase();

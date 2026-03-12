@@ -24,7 +24,10 @@ export class LayoutEngine implements ILayoutEngine {
 
   reflowTextBlock(block: TextBlock, fontManager: IFontManager, options?: { autoGrow?: boolean }): TextBlock {
     const lineBreaker = this.getLineBreaker();
-    const maxWidth = block.bounds.width;
+    // In autoGrow mode, single-line blocks use Infinity so text stays on one line
+    // and the block grows horizontally. Multi-line blocks keep original width and grow vertically.
+    const isSingleLine = block.originalBounds.height < (block.paragraphs[0]?.runs[0]?.style.fontSize ?? 12) * 1.8;
+    const maxWidth = (options?.autoGrow && isSingleLine) ? Infinity : block.bounds.width;
 
     // Layout each paragraph
     let currentY = 0;

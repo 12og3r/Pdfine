@@ -27,6 +27,7 @@ function createMockFontManager(hasAllGlyphs = true): IFontManager {
     hasGlyph: () => hasAllGlyphs,
     getFallbackFont: () => 'sans-serif',
     getFontData: () => undefined,
+    getAscent: (_fontId: string, fontSize: number) => fontSize * 0.8,
     extractAndRegister: () => Promise.resolve(),
     destroy: () => {},
   }

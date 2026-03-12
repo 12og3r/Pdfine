@@ -56,6 +56,11 @@ export function splitRunAtOffset(paragraph: Paragraph, runIdx: number, localOffs
   if (localOffset <= 0 || localOffset >= run.text.length) return;
   const before: TextRun = { text: run.text.slice(0, localOffset), style: { ...run.style } };
   const after: TextRun = { text: run.text.slice(localOffset), style: { ...run.style } };
+  // Split pdfCharWidths if present
+  if (run.pdfCharWidths) {
+    before.pdfCharWidths = run.pdfCharWidths.slice(0, localOffset);
+    after.pdfCharWidths = run.pdfCharWidths.slice(localOffset);
+  }
   paragraph.runs.splice(runIdx, 1, before, after);
 }
 
@@ -95,6 +100,11 @@ function insertPlainText(block: TextBlock, offset: number, text: string): void {
   }
   const run = para.runs[loc.runIdx];
   run.text = run.text.slice(0, loc.localOffset) + text + run.text.slice(loc.localOffset);
+  // Insert NaN entries for new characters (no PDF width → fall back to canvas measurement)
+  if (run.pdfCharWidths) {
+    const nanEntries = new Array(text.length).fill(NaN);
+    run.pdfCharWidths.splice(loc.localOffset, 0, ...nanEntries);
+  }
 }
 
 function insertParagraphBreak(block: TextBlock, offset: number): void {
@@ -130,6 +140,10 @@ function deleteTextInBlock(block: TextBlock, offset: number, length: number): vo
     if (availableInRun > 0) {
       const deleteCount = Math.min(remaining, availableInRun);
       run.text = run.text.slice(0, loc.localOffset) + run.text.slice(loc.localOffset + deleteCount);
+      // Remove corresponding pdfCharWidths entries
+      if (run.pdfCharWidths) {
+        run.pdfCharWidths.splice(loc.localOffset, deleteCount);
+      }
       remaining -= deleteCount;
       // Remove empty runs (but keep at least one per paragraph)
       if (run.text.length === 0 && para.runs.length > 1) {

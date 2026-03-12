@@ -11,6 +11,7 @@ Main orchestrator implementing `IPdfParser`.
 - Coordinates TextBlockBuilder, ImageExtractor, PathExtractor
 - Converts PDF coordinates (bottom-left origin) to layout coordinates (top-left origin)
 - Stores pdfDoc reference in DocumentModel for later font extraction
+- Passes total PDF item width as `pdfItemWidth` on `RawTextItem` (proportional per-char widths are computed at layout time)
 
 ### TextBlockBuilder.ts
 Groups raw text items into logical blocks, paragraphs, and runs.
@@ -21,6 +22,8 @@ Groups raw text items into logical blocks, paragraphs, and runs.
 - Inter-item spacing: gap > `fontSize * 0.15` inserts space
 - Merges consecutive runs with identical styles
 - Font weight/style inferred from font name ("bold", "italic", "oblique")
+- Accumulates `pdfItemWidth` from `RawTextItem` into `TextRun.pdfRunWidth` (total run width); uses `item.width` as fallback when `pdfItemWidth` is unavailable on a merged item
+- Inter-line join uses `\n` (not space) to preserve original PDF line breaks; `\n` has zero width so no pdfRunWidth adjustment is needed; the GreedyLineBreaker treats `\n` as hard breaks
 
 ### ImageExtractor.ts
 Extracts embedded images from PDF operator list.

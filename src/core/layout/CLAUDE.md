@@ -8,12 +8,12 @@ Text layout pipeline — transforms styled text into positioned glyphs via line 
 ### LayoutEngine.ts
 Orchestrator implementing `ILayoutEngine`.
 - `setStrategy('greedy' | 'knuth-plass')` — switch line breaking algorithm
-- `reflowTextBlock(block, fontManager, options?)` — layout single block. When `options.autoGrow` is true, expands bounds to fit content (used during editing). Otherwise runs two-pass: layout then overflow check.
+- `reflowTextBlock(block, fontManager, options?)` — layout single block. When `options.autoGrow` is true: single-line blocks (originalBounds.height < fontSize * 1.8) use `Infinity` as maxWidth to grow horizontally; multi-line blocks keep original width and grow vertically. Otherwise runs two-pass: layout then overflow check.
 - `reflowPage(page, fontManager)` — layout all text elements on a page
 
 ### ParagraphLayout.ts
 Handles individual paragraph layout.
-- `flattenRuns(paragraph)` → CharInfo[] (flat character array with styles)
+- `flattenRuns(paragraph, fontManager)` → CharInfo[] (flat character array with styles and optional `pdfWidth`); computes proportional per-char widths from `pdfRunWidth` using `computeProportionalWidths()`, then **stores them back** on `run.pdfCharWidths` and clears `run.pdfRunWidth` so subsequent layouts (after text insertion) preserve original character widths
 - `layoutParagraph(paragraph, maxWidth, fontManager, lineBreaker, startY)` → LayoutLine[]
 - `positionGlyphs()` — handles alignment: left, center, right, justify; uses per-char baseline from TextMeasurer for accurate Y positioning
 - Justify distributes extra space across word gaps (spaces only)
@@ -35,9 +35,10 @@ Optimal O(n²) dynamic programming line breaking.
 
 ### TextMeasurer.ts
 Text measurement utilities.
-- `measureChar(char, fontId, fontSize, fontManager, letterSpacing)` — character width
+- `measureChar(char, fontId, fontSize, fontManager, letterSpacing, pdfWidth?)` — character width; returns 0 for `\n`; uses `pdfWidth` when available (from PDF glyph tables), falls back to canvas measurement via fontManager
+- `measureRun(run, fontManager)` — uses `run.pdfCharWidths` per character when available
 - `getLineHeight(fontSize, lineSpacing, fontId, fontManager)` — using font metrics
-- `getBaseline()` — baseline distance from line top
+- `getBaseline()` — baseline distance from line top; delegates to `fontManager.getAscent()` for consistent ascent calculation
 - All measurements scale with fontSize; lineSpacing is a multiplier
 
 ### OverflowHandler.ts
@@ -55,7 +56,7 @@ Barrel exports: LayoutEngine, GreedyLineBreaker, KnuthPlassLineBreaker, TextMeas
 
 ## Pipeline
 ```
-1. Flatten: Paragraph.runs → CharInfo[] (chars with styles)
+1. Flatten: Paragraph.runs → CharInfo[] (chars with styles + optional pdfWidth; proportional scaling from pdfRunWidth happens here)
 2. Line Break: CharInfo[] → number[] (break indices)
 3. Position: CharInfo[] + breaks → PositionedGlyph[] (x,y coords)
 4. Overflow: Check height → auto-shrink if needed → re-run 1-3

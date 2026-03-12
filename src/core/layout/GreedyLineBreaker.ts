@@ -5,6 +5,7 @@ import { TextMeasurer } from './TextMeasurer';
 export interface CharInfo {
   char: string;
   style: TextStyle;
+  pdfWidth?: number;  // original PDF glyph width; undefined or NaN → fall back to canvas measurement
 }
 
 const NO_LINE_START = new Set('。，、；：！？）」』】〉》,.;:!?)]}');
@@ -46,9 +47,9 @@ export class GreedyLineBreaker {
     let lineStart = 0;
 
     for (let i = 0; i < chars.length; i++) {
-      const { char, style } = chars[i];
+      const { char, style, pdfWidth } = chars[i];
       const letterSpacing = style.letterSpacing ?? 0;
-      const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing);
+      const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
 
       // Newline forces a break
       if (char === '\n') {
@@ -81,7 +82,7 @@ export class GreedyLineBreaker {
           for (let j = lineStart; j <= i; j++) {
             const s = chars[j].style;
             const ls = s.letterSpacing ?? 0;
-            lineWidth += this.measurer.measureChar(chars[j].char, s.fontId, s.fontSize, fontManager, ls);
+            lineWidth += this.measurer.measureChar(chars[j].char, s.fontId, s.fontSize, fontManager, ls, chars[j].pdfWidth);
           }
           lastBreakOpportunity = -1;
         } else {

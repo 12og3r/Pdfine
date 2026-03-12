@@ -9,16 +9,20 @@ Font management subsystem — extraction from PDFs, registration, metrics calcul
 Central manager implementing `IFontManager`.
 - `extractAndRegister(pdfDoc)` — orchestrates extraction → registration → metrics parsing
 - `measureText/measureChar()` — text measurement via OffscreenCanvas (cached)
+- `getAscent(fontId, fontSize)` — font ascent in CSS pixels; uses opentype.js metrics when available, falls back to Canvas `TextMetrics.fontBoundingBoxAscent`, then `fontSize * 0.8`
 - `hasGlyph(fontId, char)` — checks glyph existence via width > 0
 - `getFallbackFont(fontId, char)` — finds substitute font
 - Three caches: char widths, text measurements, metrics
 - Registers fonts with browser's FontFace API
 
 ### FontExtractor.ts
-Extracts font data from PDF documents via pdf.js internals.
-- Accesses `commonObjs._objs` Map for font data (internal pdf.js API)
+Extracts font data from PDF documents via pdf.js APIs.
+- **pdfjs v5+**: Finds font names from operator list (OPS.setFont), then uses `commonObjs.get(fontName)`
+- **Legacy pdfjs**: Falls back to `commonObjs._objs` Map enumeration
+- Detects fonts already registered by pdfjs in `document.fonts` (sets `fontFace` on `RegisteredFont`)
+- Bold/italic detection: from pdfjs data flags, with fallback to font name analysis
 - Detects format: TrueType, OpenType, Type1, CIDFont
-- Only TrueType/OpenType marked as `editable: true`
+- Fonts with registered FontFace are marked `editable: true` even without raw data
 - Cleans font names: strips subset prefixes and style suffixes
 - Converts Uint8Array to ArrayBuffer (prevents SharedArrayBuffer issues)
 
@@ -45,8 +49,9 @@ Category detected by font name keywords (mono, times, georgia, serif).
 - `infra/Logger`, `types/font`, `types/document`, `interfaces/IFontManager`
 
 ## Developer Notes
-- pdf.js internal API (`commonObjs._objs`) may break on version updates
-- Only TrueType/OpenType fonts are editable; Type1/CIDFont are display-only
+- pdfjs v5 uses `PDFObjects` with `get()/has()` methods (no `_objs` Map) — font names come from operator list
+- pdfjs v5 auto-registers fonts with browser FontFace API under `loadedName`
+- Fonts with pdfjs-registered FontFace are editable even without raw binary data
 - Call `destroy()` on teardown — clears caches and unregisters FontFaces
 - `hasGlyph()` uses measurement proxy (width > 0), not 100% accurate for all fonts
 - Canvas-based measurement may differ slightly from actual PDF rendering

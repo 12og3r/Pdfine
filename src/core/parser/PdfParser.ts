@@ -156,6 +156,7 @@ export class PdfParser implements IPdfParser {
         fontStyle,
         color,
         editable,
+        pdfItemWidth: textItem.width > 0 ? textItem.width : undefined,
       });
     }
 

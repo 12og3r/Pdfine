@@ -12,5 +12,6 @@ export interface IFontManager {
   hasGlyph(fontId: string, char: string): boolean;
   getFallbackFont(fontId: string, char: string): string;
   getFontData(fontId: string): ArrayBuffer | undefined;
+  getAscent(fontId: string, fontSize: number): number;
   destroy(): void;
 }

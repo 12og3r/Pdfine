@@ -98,6 +98,8 @@ export interface Paragraph {
 export interface TextRun {
   text: string;
   style: TextStyle;
+  pdfCharWidths?: number[];  // per-character advance widths from PDF (parallel to text chars)
+  pdfRunWidth?: number;      // total PDF width for the run; used at layout time for proportional scaling
 }
 
 export interface TextStyle {

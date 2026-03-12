@@ -19,6 +19,7 @@ function createMockFontManager(charWidth = 7): IFontManager {
       unitsPerEm: 1000, ascender: 800, descender: -200,
       lineGap: 0, xHeight: 500, capHeight: 700,
     }),
+    getAscent: (_fontId: string, fontSize: number) => fontSize * 0.8,
     getFont: () => undefined,
     getAvailableFonts: () => [],
     getFontFace: () => null,

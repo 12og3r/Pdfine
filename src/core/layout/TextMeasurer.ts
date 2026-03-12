@@ -8,8 +8,14 @@ export class TextMeasurer {
     fontSize: number,
     fontManager: IFontManager,
     letterSpacing: number = 0,
+    pdfWidth?: number,
   ): number {
-    const width = fontManager.measureChar(char, fontId, fontSize);
+    // Newline has zero width
+    if (char === '\n') return 0;
+    // Use PDF-stored width if available and valid (not NaN/undefined)
+    const width = (pdfWidth !== undefined && !isNaN(pdfWidth))
+      ? pdfWidth
+      : fontManager.measureChar(char, fontId, fontSize);
     return width + letterSpacing * fontSize;
   }
 
@@ -18,7 +24,8 @@ export class TextMeasurer {
     const letterSpacing = style.letterSpacing ?? 0;
     let total = 0;
     for (let i = 0; i < text.length; i++) {
-      total += this.measureChar(text[i], style.fontId, style.fontSize, fontManager, letterSpacing);
+      const pdfWidth = run.pdfCharWidths?.[i];
+      total += this.measureChar(text[i], style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
     }
     return total;
   }
@@ -35,11 +42,6 @@ export class TextMeasurer {
   }
 
   getBaseline(fontSize: number, fontId: string, fontManager: IFontManager): number {
-    const metrics = fontManager.getMetrics(fontId);
-    if (metrics) {
-      const scale = fontSize / metrics.unitsPerEm;
-      return metrics.ascender * scale;
-    }
-    return fontSize * 0.8;
+    return fontManager.getAscent(fontId, fontSize);
   }
 }

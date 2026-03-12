@@ -8,7 +8,7 @@ All core TypeScript type definitions for the PDF editor. Shared across the entir
 ### document.ts
 Core data model and edit commands.
 - **Model hierarchy**: DocumentModel → PageModel → PageElement (union) → TextBlock/ImageElement/PathElement/OverlayElement
-- **Text structure**: TextBlock → Paragraph[] → TextRun[] → TextStyle
+- **Text structure**: TextBlock → Paragraph[] → TextRun[] → TextStyle; TextRun has optional `pdfCharWidths?: number[]` for per-character widths and `pdfRunWidth?: number` for total PDF run width (used for proportional scaling at layout time)
 - **Layout output**: LayoutLine → PositionedGlyph (char with x, y, width, height, style)
 - **Edit commands**: Discriminated union (INSERT_TEXT, DELETE_TEXT, REPLACE_TEXT, CHANGE_STYLE, BATCH, etc.)
 - **Overflow state**: Discriminated union (normal, within_tolerance, auto_shrunk, overflowing)

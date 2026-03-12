@@ -15,6 +15,7 @@ export interface RawTextItem {
   fontStyle: 'normal' | 'italic';
   color: Color;
   editable: boolean;
+  pdfItemWidth?: number;  // total PDF width for this text item (for proportional scaling at layout time)
 }
 
 interface TextLine {
@@ -215,19 +216,40 @@ export class TextBlockBuilder {
               const gap = item.x - (prevItem.x + prevItem.width);
               if (gap > item.fontSize * 0.15) {
                 lastRun.text += ' ';
+                // Accumulate gap into pdfRunWidth for space
+                if (lastRun.pdfRunWidth !== undefined) {
+                  lastRun.pdfRunWidth += gap;
+                }
               }
             }
             lastRun.text += item.text;
+            // Accumulate pdfRunWidth
+            if (item.pdfItemWidth !== undefined) {
+              if (lastRun.pdfRunWidth === undefined) {
+                // Can't combine if previous part had no PDF width; drop tracking
+                lastRun.pdfRunWidth = undefined;
+              } else {
+                lastRun.pdfRunWidth += item.pdfItemWidth;
+              }
+            } else if (lastRun.pdfRunWidth !== undefined) {
+              // Item has no pdfItemWidth but has geometric width; use it as estimate
+              lastRun.pdfRunWidth += item.width;
+            }
             continue;
           }
         }
 
-        currentRuns.push(createTextRun(item.text, style));
+        const run = createTextRun(item.text, style);
+        if (item.pdfItemWidth !== undefined) {
+          run.pdfRunWidth = item.pdfItemWidth;
+        }
+        currentRuns.push(run);
       }
 
-      // Add space/newline between lines
+      // Add newline between lines to preserve original PDF line breaks
       if (li < group.lines.length - 1 && currentRuns.length > 0) {
-        currentRuns[currentRuns.length - 1].text += ' ';
+        const lastRun = currentRuns[currentRuns.length - 1];
+        lastRun.text += '\n';
       }
 
       prevLineY = line.y;
