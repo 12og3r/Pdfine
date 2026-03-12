@@ -1,10 +1,5 @@
 import { test, expect } from '@playwright/test'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const VISA_PDF = path.resolve(__dirname, '../Visa.pdf')
+const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
 
 test('Enter key should save edited text', async ({ page }) => {
   await page.goto('/')

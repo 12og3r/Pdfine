@@ -26,6 +26,3 @@ dist-ssr
 # E2E screenshots and test results
 e2e/screenshots/
 test-results/
-
-# Example files
-example/

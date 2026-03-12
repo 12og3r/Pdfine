@@ -1,6 +1,6 @@
 /**
  * Integration test: Traces the PDF loading pipeline step-by-step
- * using the actual Visa.pdf to find where rendering breaks.
+ * using the actual example_en.pdf to find where rendering breaks.
  * Uses pdfjs-dist/legacy for jsdom compatibility.
  */
 import { describe, it, expect, beforeAll } from 'vitest'
@@ -14,7 +14,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 const workerPath = path.resolve(__dirname, '../../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs')
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath
 
-const PDF_PATH = path.resolve(__dirname, '../../Visa.pdf')
+const PDF_PATH = '/Users/bytedance/Desktop/example_en.pdf'
 
 // Helper to get a fresh pdfDoc - copies buffer since pdfjs detaches it
 async function loadPdf(data: ArrayBuffer) {
@@ -28,12 +28,12 @@ async function loadPdf(data: ArrayBuffer) {
   return loadingTask.promise
 }
 
-describe('PDF Pipeline Integration (Visa.pdf)', () => {
+describe('PDF Pipeline Integration (example_en.pdf)', () => {
   let pdfData: ArrayBuffer
 
   beforeAll(() => {
     if (!fs.existsSync(PDF_PATH)) {
-      throw new Error(`Visa.pdf not found at ${PDF_PATH}`)
+      throw new Error(`example_en.pdf not found at ${PDF_PATH}`)
     }
     const buffer = fs.readFileSync(PDF_PATH)
     pdfData = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
