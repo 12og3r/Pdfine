@@ -92,6 +92,7 @@ export interface Paragraph {
   runs: TextRun[];
   alignment: 'left' | 'center' | 'right' | 'justify';
   lineSpacing: number;
+  pdfLineHeight?: number;  // actual baseline-to-baseline distance from PDF coordinates
   lines?: LayoutLine[];
 }
 
@@ -100,6 +101,7 @@ export interface TextRun {
   style: TextStyle;
   pdfCharWidths?: number[];  // per-character advance widths from PDF (parallel to text chars)
   pdfRunWidth?: number;      // total PDF width for the run; used at layout time for proportional scaling
+  pdfLineWidths?: number[];  // per-line-segment PDF widths (parallel to \n-delimited segments of text)
 }
 
 export interface TextStyle {

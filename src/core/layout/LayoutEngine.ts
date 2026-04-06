@@ -22,7 +22,7 @@ export class LayoutEngine implements ILayoutEngine {
     return this.strategy;
   }
 
-  reflowTextBlock(block: TextBlock, fontManager: IFontManager, options?: { autoGrow?: boolean }): TextBlock {
+  reflowTextBlock(block: TextBlock, fontManager: IFontManager, options?: { autoGrow?: boolean; syncBounds?: boolean }): TextBlock {
     const lineBreaker = this.getLineBreaker();
     // In autoGrow mode, single-line blocks use Infinity so text stays on one line
     // and the block grows horizontally. Multi-line blocks keep original width and grow vertically.
@@ -43,6 +43,21 @@ export class LayoutEngine implements ILayoutEngine {
     });
 
     let updatedBlock: TextBlock = { ...block, paragraphs };
+
+    // syncBounds: update bounds.height to match actual content height.
+    // Used during initial load and edit-start to prevent false overflow
+    // when bounds (from PDF coordinates) don't account for the full
+    // lineHeight of the last line.
+    if (options?.syncBounds) {
+      const contentHeight = currentY;
+      if (contentHeight > updatedBlock.bounds.height) {
+        updatedBlock = {
+          ...updatedBlock,
+          bounds: { ...updatedBlock.bounds, height: contentHeight },
+          originalBounds: { ...updatedBlock.originalBounds, height: contentHeight },
+        };
+      }
+    }
 
     if (options?.autoGrow) {
       // Auto-grow: expand bounds to fit content, skip overflow handling
@@ -98,7 +113,7 @@ export class LayoutEngine implements ILayoutEngine {
   reflowPage(page: PageModel, fontManager: IFontManager): PageModel {
     const elements = page.elements.map(element => {
       if (element.type === 'text') {
-        return this.reflowTextBlock(element, fontManager);
+        return this.reflowTextBlock(element, fontManager, { syncBounds: true });
       }
       return element;
     });

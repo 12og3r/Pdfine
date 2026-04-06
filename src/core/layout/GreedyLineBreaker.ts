@@ -67,7 +67,10 @@ export class GreedyLineBreaker {
 
       lineWidth += charWidth;
 
-      if (lineWidth > maxWidth && i > lineStart) {
+      // Use a small tolerance to avoid soft wraps caused by floating-point
+      // rounding in proportional width scaling from PDF measurements.
+      const SOFT_WRAP_TOLERANCE = 0.5;
+      if (lineWidth > maxWidth + SOFT_WRAP_TOLERANCE && i > lineStart) {
         if (lastBreakOpportunity > lineStart) {
           // Break at last opportunity
           let breakAt = lastBreakOpportunity;

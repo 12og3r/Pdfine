@@ -30,7 +30,11 @@ export class TextMeasurer {
     return total;
   }
 
-  getLineHeight(fontSize: number, lineSpacing: number, fontId: string, fontManager: IFontManager): number {
+  getLineHeight(fontSize: number, lineSpacing: number, fontId: string, fontManager: IFontManager, pdfLineHeight?: number): number {
+    // Use the actual PDF baseline-to-baseline distance when available
+    if (pdfLineHeight !== undefined) {
+      return pdfLineHeight;
+    }
     const metrics = fontManager.getMetrics(fontId);
     if (metrics) {
       const scale = fontSize / metrics.unitsPerEm;

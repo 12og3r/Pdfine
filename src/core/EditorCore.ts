@@ -609,7 +609,7 @@ export class EditorCore implements IEditorCore {
           for (let i = 0; i < page.elements.length; i++) {
             const el = page.elements[i]
             if (el.type === 'text' && el.id === blockId) {
-              page.elements[i] = this.layoutEngine.reflowTextBlock(el, this.fontManager)
+              page.elements[i] = this.layoutEngine.reflowTextBlock(el, this.fontManager, { syncBounds: true })
               break
             }
           }

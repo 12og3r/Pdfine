@@ -10,6 +10,7 @@ Initializes EditorCore singleton and syncs editor events to UIStore.
 - Creates EditorCore via `useRef` (singleton pattern)
 - Subscribes to 7 events: documentLoaded, historyChanged, overflow, styleAtCursor, selectionChanged, editStart, editEnd
 - Each subscription syncs to corresponding UIStore setter
+- Exposes EditorCore on `window.__EDITOR_CORE__` in development mode (for E2E testing)
 - Cleanup: unsubscribes all events + calls `editorCore.destroy()` on unmount
 - Returns `IEditorCore` instance
 

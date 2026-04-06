@@ -23,7 +23,7 @@ export class ParagraphLayout {
       const defaultStyle = paragraph.runs[0]?.style;
       if (!defaultStyle) return [];
       const lineHeight = this.measurer.getLineHeight(
-        defaultStyle.fontSize, paragraph.lineSpacing, defaultStyle.fontId, fontManager,
+        defaultStyle.fontSize, paragraph.lineSpacing, defaultStyle.fontId, fontManager, paragraph.pdfLineHeight,
       );
       return [{
         glyphs: [],
@@ -62,7 +62,7 @@ export class ParagraphLayout {
       // Find dominant font for line height
       const dominantStyle = this.getDominantStyle(lineChars);
       const lineHeight = this.measurer.getLineHeight(
-        dominantStyle.fontSize, paragraph.lineSpacing, dominantStyle.fontId, fontManager,
+        dominantStyle.fontSize, paragraph.lineSpacing, dominantStyle.fontId, fontManager, paragraph.pdfLineHeight,
       );
       const baseline = this.measurer.getBaseline(dominantStyle.fontSize, dominantStyle.fontId, fontManager);
 
@@ -95,12 +95,14 @@ export class ParagraphLayout {
   private flattenRuns(paragraph: Paragraph, fontManager: IFontManager): CharInfo[] {
     const chars: CharInfo[] = [];
     for (const run of paragraph.runs) {
-      // If the run has pdfRunWidth but no pdfCharWidths, compute proportional
+      // If the run has pdfRunWidth/pdfLineWidths but no pdfCharWidths, compute proportional
       // per-char widths by scaling canvas-measured widths to match the PDF total.
-      if (run.pdfRunWidth !== undefined && run.pdfRunWidth > 0 && !run.pdfCharWidths) {
+      const hasPdfWidths = (run.pdfRunWidth !== undefined && run.pdfRunWidth > 0) || (run.pdfLineWidths && run.pdfLineWidths.length > 0);
+      if (hasPdfWidths && !run.pdfCharWidths) {
         const proportionalWidths = this.computeProportionalWidths(run, fontManager);
         run.pdfCharWidths = proportionalWidths;
         run.pdfRunWidth = undefined;
+        run.pdfLineWidths = undefined;
         for (let i = 0; i < run.text.length; i++) {
           chars.push({
             char: run.text[i],
@@ -124,37 +126,77 @@ export class ParagraphLayout {
 
   /**
    * Compute proportional per-character widths by scaling canvas-measured widths
-   * to match the PDF's total run width. This preserves character width ratios
-   * (e.g., 'V' wider than 'i') while matching the PDF's overall width.
+   * to match the PDF's width. When per-line widths are available (pdfLineWidths),
+   * scales each \n-delimited segment independently to preserve the PDF's per-line
+   * layout. Otherwise falls back to scaling the entire run uniformly.
    */
   private computeProportionalWidths(run: TextRun, fontManager: IFontManager): number[] {
     const { text, style } = run;
-    const pdfRunWidth = run.pdfRunWidth!;
 
     // Measure each character with canvas (newlines get zero width)
     const canvasWidths: number[] = [];
-    let canvasTotal = 0;
     for (let i = 0; i < text.length; i++) {
       if (text[i] === '\n') {
         canvasWidths.push(0);
       } else {
         const w = fontManager.measureChar(text[i], style.fontId, style.fontSize);
         canvasWidths.push(w);
-        canvasTotal += w;
       }
     }
 
-    // If canvas total is zero (e.g., all zero-width chars), fall back to uniform
-    // but still keep newlines at zero
+    // Per-line scaling: each \n-delimited segment uses its own PDF width
+    if (run.pdfLineWidths && run.pdfLineWidths.length > 0) {
+      return this.scalePerSegment(text, canvasWidths, run.pdfLineWidths);
+    }
+
+    // Fallback: single scale factor for the entire run
+    const pdfRunWidth = run.pdfRunWidth!;
+    let canvasTotal = 0;
+    for (const w of canvasWidths) canvasTotal += w;
+
     if (canvasTotal === 0) {
       const visibleCount = text.split('').filter(c => c !== '\n').length;
       const uniform = visibleCount > 0 ? pdfRunWidth / visibleCount : 0;
       return canvasWidths.map((_, i) => text[i] === '\n' ? 0 : uniform);
     }
 
-    // Scale each character proportionally (newlines stay at zero)
     const scaleFactor = pdfRunWidth / canvasTotal;
     return canvasWidths.map(w => w * scaleFactor);
+  }
+
+  /**
+   * Scale canvas widths per \n-delimited segment using per-line PDF widths.
+   */
+  private scalePerSegment(text: string, canvasWidths: number[], pdfLineWidths: number[]): number[] {
+    const result: number[] = new Array(text.length);
+    let segIdx = 0;
+    let segStart = 0;
+
+    for (let i = 0; i <= text.length; i++) {
+      if (i === text.length || text[i] === '\n') {
+        // Scale this segment
+        const pdfWidth = segIdx < pdfLineWidths.length ? pdfLineWidths[segIdx] : 0;
+        let segCanvasTotal = 0;
+        for (let j = segStart; j < i; j++) segCanvasTotal += canvasWidths[j];
+
+        if (segCanvasTotal > 0) {
+          const scale = pdfWidth / segCanvasTotal;
+          for (let j = segStart; j < i; j++) result[j] = canvasWidths[j] * scale;
+        } else {
+          const visibleCount = i - segStart;
+          const uniform = visibleCount > 0 ? pdfWidth / visibleCount : 0;
+          for (let j = segStart; j < i; j++) result[j] = uniform;
+        }
+
+        if (i < text.length) {
+          result[i] = 0; // \n has zero width
+        }
+        segIdx++;
+        segStart = i + 1;
+      }
+    }
+
+    return result;
   }
 
   private getDominantStyle(chars: CharInfo[]): TextStyle {

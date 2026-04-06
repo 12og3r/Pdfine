@@ -178,6 +178,8 @@ export class TextBlockBuilder {
     const paragraphs: Paragraph[] = [];
     let currentRuns: TextRun[] = [];
     let prevLineY = group.lines[0].y;
+    // Track baseline Y positions per paragraph to compute pdfLineHeight
+    let currentLineYs: number[] = [group.lines[0].y];
 
     for (let li = 0; li < group.lines.length; li++) {
       const line = group.lines[li];
@@ -189,10 +191,21 @@ export class TextBlockBuilder {
         if (lineGap > prevFontSize * 1.5) {
           // New paragraph
           if (currentRuns.length > 0) {
-            paragraphs.push(createParagraph(currentRuns, 'left', DEFAULT_LINE_SPACING));
+            // Finalize per-line width tracking for runs in this paragraph
+            for (const run of currentRuns) {
+              if (run.pdfLineWidths && run.pdfRunWidth !== undefined) {
+                run.pdfLineWidths.push(run.pdfRunWidth);
+                run.pdfRunWidth = undefined;
+              }
+            }
+            const para = createParagraph(currentRuns, 'left', DEFAULT_LINE_SPACING);
+            para.pdfLineHeight = this.computePdfLineHeight(currentLineYs);
+            paragraphs.push(para);
             currentRuns = [];
+            currentLineYs = [];
           }
         }
+        currentLineYs.push(line.y);
       }
 
       // Build runs from items on this line
@@ -246,9 +259,20 @@ export class TextBlockBuilder {
         currentRuns.push(run);
       }
 
-      // Add newline between lines to preserve original PDF line breaks
+      // Add newline between lines to preserve original PDF line breaks.
+      // Also snapshot the current line segment's accumulated PDF width
+      // so proportional scaling can be done per-line (not per-run).
       if (li < group.lines.length - 1 && currentRuns.length > 0) {
         const lastRun = currentRuns[currentRuns.length - 1];
+        // Record current line segment's PDF width before adding \n
+        if (lastRun.pdfRunWidth !== undefined) {
+          if (!lastRun.pdfLineWidths) {
+            lastRun.pdfLineWidths = [];
+          }
+          lastRun.pdfLineWidths.push(lastRun.pdfRunWidth);
+          // Reset pdfRunWidth accumulator for the next line segment
+          lastRun.pdfRunWidth = 0;
+        }
         lastRun.text += '\n';
       }
 
@@ -256,7 +280,16 @@ export class TextBlockBuilder {
     }
 
     if (currentRuns.length > 0) {
-      paragraphs.push(createParagraph(currentRuns, 'left', DEFAULT_LINE_SPACING));
+      // Finalize per-line width tracking: push last segment's width
+      for (const run of currentRuns) {
+        if (run.pdfLineWidths && run.pdfRunWidth !== undefined) {
+          run.pdfLineWidths.push(run.pdfRunWidth);
+          run.pdfRunWidth = undefined;  // now fully tracked per-line
+        }
+      }
+      const para = createParagraph(currentRuns, 'left', DEFAULT_LINE_SPACING);
+      para.pdfLineHeight = this.computePdfLineHeight(currentLineYs);
+      paragraphs.push(para);
     }
 
     // Ensure at least one paragraph
@@ -265,6 +298,15 @@ export class TextBlockBuilder {
     }
 
     return createTextBlock(paragraphs, bounds, group.editable);
+  }
+
+  private computePdfLineHeight(lineYs: number[]): number | undefined {
+    if (lineYs.length < 2) return undefined;
+    let totalGap = 0;
+    for (let i = 1; i < lineYs.length; i++) {
+      totalGap += lineYs[i] - lineYs[i - 1];
+    }
+    return totalGap / (lineYs.length - 1);
   }
 
   private sameStyle(a: TextStyle, b: TextStyle): boolean {

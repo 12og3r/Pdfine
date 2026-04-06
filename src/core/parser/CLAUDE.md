@@ -24,6 +24,8 @@ Groups raw text items into logical blocks, paragraphs, and runs.
 - Font weight/style inferred from font name ("bold", "italic", "oblique")
 - Accumulates `pdfItemWidth` from `RawTextItem` into `TextRun.pdfRunWidth` (total run width); uses `item.width` as fallback when `pdfItemWidth` is unavailable on a merged item
 - Inter-line join uses `\n` (not space) to preserve original PDF line breaks; `\n` has zero width so no pdfRunWidth adjustment is needed; the GreedyLineBreaker treats `\n` as hard breaks
+- Tracks per-line PDF widths (`TextRun.pdfLineWidths`) for multi-line runs: when `\n` is inserted between lines, the accumulated pdfRunWidth for that line segment is snapshotted into `pdfLineWidths`, enabling per-segment proportional width scaling in ParagraphLayout (prevents cross-line width contamination)
+- Computes `pdfLineHeight` (average baseline-to-baseline distance) per paragraph from raw PDF line Y positions; stored on `Paragraph.pdfLineHeight` so the layout engine can reproduce the PDF's native line spacing instead of using `DEFAULT_LINE_SPACING`
 
 ### ImageExtractor.ts
 Extracts embedded images from PDF operator list.

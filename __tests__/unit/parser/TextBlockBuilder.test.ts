@@ -22,7 +22,7 @@ function makeItem(overrides: Partial<RawTextItem> & { text: string; x: number; y
 describe('TextBlockBuilder pdfRunWidth preservation', () => {
   const builder = new TextBlockBuilder();
 
-  it('should preserve pdfRunWidth when appending inter-line newline', () => {
+  it('should preserve per-line PDF widths when appending inter-line newline', () => {
     // Two lines that will be merged into one paragraph.
     // Items on each line have pdfItemWidth set.
     // Inter-line joins use newline (not space) to preserve original line structure.
@@ -37,10 +37,13 @@ describe('TextBlockBuilder pdfRunWidth preservation', () => {
     const run = blocks[0].paragraphs[0].runs[0];
     // The inter-line newline should be added
     expect(run.text).toBe('Hello\nWorld');
-    // pdfRunWidth should NOT be undefined — it should be preserved
-    expect(run.pdfRunWidth).toBeDefined();
-    // Should be: 32 (first item) + 31 (second item) = 63 (no space width added for newline)
-    expect(run.pdfRunWidth).toBeCloseTo(63, 0);
+    // Multi-line runs should use pdfLineWidths (per-segment) instead of pdfRunWidth
+    expect(run.pdfLineWidths).toBeDefined();
+    expect(run.pdfLineWidths).toHaveLength(2);
+    expect(run.pdfLineWidths![0]).toBeCloseTo(32, 0); // first line: "Hello"
+    expect(run.pdfLineWidths![1]).toBeCloseTo(31, 0); // second line: "World"
+    // pdfRunWidth should be cleared since it's now tracked per-line
+    expect(run.pdfRunWidth).toBeUndefined();
   });
 
   it('should use item.width as fallback when pdfItemWidth is missing on merged item', () => {

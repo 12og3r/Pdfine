@@ -56,6 +56,13 @@ export class OverflowHandler {
     const adjustments: ShrinkAdjustment[] = [];
     let paragraphs = this.deepCloneParagraphs(block.paragraphs);
 
+    // Clear pdfLineHeight so formula-based lineSpacing adjustments can take effect
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (paragraphs[i].pdfLineHeight !== undefined) {
+        paragraphs[i] = { ...paragraphs[i], pdfLineHeight: undefined };
+      }
+    }
+
     // Priority 1: Reduce lineSpacing
     const originalLineSpacings = paragraphs.map(p => p.lineSpacing);
     const step = 0.05;

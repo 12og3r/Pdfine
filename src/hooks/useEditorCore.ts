@@ -71,6 +71,10 @@ export function useEditorCore(): IEditorCore {
   }, [editorCore])
 
   useEffect(() => {
+    // Expose EditorCore for E2E testing in development mode
+    if (import.meta.env.DEV) {
+      (window as unknown as Record<string, unknown>).__EDITOR_CORE__ = editorCore
+    }
     return () => {
       editorCore.destroy()
     }
