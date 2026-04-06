@@ -228,19 +228,6 @@ export class CursorManager {
     return null;
   }
 
-  /**
-   * Counts how many \n characters exist in the paragraph's run text.
-   * These are inter-line newlines that have no corresponding glyph.
-   */
-  private countNewlinesInRuns(para: { runs: { text: string }[] }): number {
-    let count = 0;
-    for (const run of para.runs) {
-      for (let i = 0; i < run.text.length; i++) {
-        if (run.text[i] === '\n') count++;
-      }
-    }
-    return count;
-  }
 
   /**
    * Gets the total text length for a paragraph (glyphs + \n chars in runs).
