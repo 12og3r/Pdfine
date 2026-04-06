@@ -14,7 +14,7 @@ export function TextEditInput({ editorCore }: TextEditInputProps) {
     if (!isEditing) return
     const textarea = textareaRef.current
     if (textarea) {
-      textarea.focus()
+      textarea.focus({ preventScroll: true })
     }
   }, [isEditing])
 
@@ -23,9 +23,8 @@ export function TextEditInput({ editorCore }: TextEditInputProps) {
   return (
     <textarea
       ref={textareaRef}
-      className="absolute w-px h-px opacity-0 overflow-hidden"
-      style={{ top: 0, left: 0, caretColor: 'transparent' }}
-      autoFocus
+      className="w-px h-px opacity-0 overflow-hidden"
+      style={{ position: 'fixed', top: 0, left: 0, caretColor: 'transparent' }}
       onInput={(e) => editorCore.handleInput(e.nativeEvent as InputEvent)}
       onKeyDown={(e) => editorCore.handleKeyDown(e.nativeEvent)}
       onCompositionStart={(e) => editorCore.handleComposition(e.nativeEvent)}

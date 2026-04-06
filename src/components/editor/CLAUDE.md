@@ -21,7 +21,8 @@ Main container managing the canvas element and viewport. Handles all mouse/wheel
 ### TextEditInput.tsx
 Hidden textarea that captures keyboard and IME composition events during text editing.
 - Conditionally rendered based on `useUIStore.isEditing`
-- Auto-focuses when editing starts
+- Focuses with `preventScroll: true` when editing starts (no autoFocus attribute)
+- Uses `position: fixed` to stay outside the scroll container's flow — prevents browser from scrolling the container to make the textarea visible on input
 - Proxies input, keydown, and composition events to editorCore
 - Hidden with `opacity-0 w-px h-px`, transparent caret
 
