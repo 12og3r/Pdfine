@@ -12,9 +12,7 @@ export function EditorCanvas({ editorCore }: EditorCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const setZoom = useUIStore((s) => s.setZoom)
-  const isEditing = useUIStore((s) => s.isEditing)
   const [scrollSize, setScrollSize] = useState({ width: 0, height: 0 })
-  const [applyBtnPos, setApplyBtnPos] = useState<{ x: number; y: number } | null>(null)
 
   const updateCanvasSize = useCallback(() => {
     const canvas = canvasRef.current
@@ -134,50 +132,6 @@ export function EditorCanvas({ editorCore }: EditorCanvasProps) {
     editorCore.handleCanvasDoubleClick(e.nativeEvent)
   }
 
-  // Compute Apply button position in scrollable content coordinates
-  const updateApplyBtnPos = useCallback(() => {
-    if (!isEditing) { setApplyBtnPos(null); return }
-    const blockId = editorCore.getEditEngine().getEditingBlockId()
-    if (!blockId) { setApplyBtnPos(null); return }
-    const page = editorCore.getPageModel(editorCore.getCurrentPage())
-    if (!page) { setApplyBtnPos(null); return }
-    const el = page.elements.find(e => e.id === blockId)
-    if (!el) { setApplyBtnPos(null); return }
-    const container = containerRef.current
-    if (!container) { setApplyBtnPos(null); return }
-    const scale = editorCore.getZoom()
-    const pageW = page.width * scale
-    const pageH = page.height * scale
-    const contentW = pageW + PAGE_MARGIN * 2
-    const contentH = pageH + PAGE_MARGIN * 2
-    const canvasW = container.clientWidth
-    const canvasH = container.clientHeight
-    const baseX = contentW <= canvasW ? (canvasW - pageW) / 2 : PAGE_MARGIN
-    const baseY = contentH <= canvasH ? (canvasH - pageH) / 2 : PAGE_MARGIN
-    setApplyBtnPos({
-      x: baseX + (el.bounds.x + el.bounds.width) * scale,
-      y: baseY + (el.bounds.y + el.bounds.height) * scale + 8,
-    })
-  }, [editorCore, isEditing])
-
-  useEffect(() => {
-    updateApplyBtnPos()
-  }, [updateApplyBtnPos])
-
-  // Update Apply button position when text changes (bounds may grow)
-  useEffect(() => {
-    if (!isEditing) return
-    const unsub = editorCore.on('textChanged', () => {
-      // Defer to next frame so layout reflow completes first
-      requestAnimationFrame(updateApplyBtnPos)
-    })
-    return unsub
-  }, [editorCore, isEditing, updateApplyBtnPos])
-
-  const handleApply = useCallback(() => {
-    editorCore.getEditEngine().exitEditMode()
-    editorCore.render()
-  }, [editorCore])
 
   return (
     <div
@@ -197,33 +151,6 @@ export function EditorCanvas({ editorCore }: EditorCanvasProps) {
         />
       </div>
       <TextEditInput editorCore={editorCore} />
-      {isEditing && applyBtnPos && (
-        <button
-          onMouseDown={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            handleApply()
-          }}
-          style={{
-            position: 'absolute',
-            left: applyBtnPos.x,
-            top: applyBtnPos.y,
-            zIndex: 10,
-            padding: '4px 14px',
-            borderRadius: '6px',
-            border: 'none',
-            backgroundColor: '#6366F1',
-            color: '#fff',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-            lineHeight: '20px',
-          }}
-        >
-          Apply
-        </button>
-      )}
     </div>
   )
 }

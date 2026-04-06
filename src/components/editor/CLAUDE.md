@@ -14,7 +14,7 @@ Main container managing the canvas element and viewport. Handles all mouse/wheel
 - Delegates mouse events (down, move, up, double-click) to editorCore
 - Calls `preventDefault()` on mousedown when editing to prevent canvas from stealing textarea focus
 - Renders TextEditInput as a child
-- **Apply button**: Shown during editing, positioned below-right of the editing block. Clicking exits edit mode. Uses `position: absolute` in scroll-content space so it scrolls with the page. Position updates on `textChanged` events (via `requestAnimationFrame`) to track block bounds changes.
+- **Exit edit mode**: Enter or Escape or click outside the block. No Apply button — clean canvas.
 - **Scroll support**: Container has `overflow: auto` with a spacer div sized to zoomed page + margins. Canvas uses `position: sticky` to stay in viewport while scrolling. Scroll events update viewport offsets and trigger re-render.
 - Zoom changes recalculate scroll size via `updateCanvasSize()`
 

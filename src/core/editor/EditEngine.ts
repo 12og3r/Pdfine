@@ -219,7 +219,11 @@ export class EditEngine implements IEditEngine {
 
       case 'Enter':
         event.preventDefault();
-        this.inputHandler.handleInsertNewline();
+        if (event.shiftKey) {
+          this.inputHandler.handleInsertNewline();
+        } else {
+          this.exitEditMode();
+        }
         break;
 
       case 'Escape':

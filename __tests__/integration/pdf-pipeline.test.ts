@@ -14,7 +14,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 const workerPath = path.resolve(__dirname, '../../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs')
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath
 
-const PDF_PATH = '/Users/bytedance/Desktop/example_en.pdf'
+const PDF_PATH = path.resolve(__dirname, '../../example/example_en.pdf')
 
 // Helper to get a fresh pdfDoc - copies buffer since pdfjs detaches it
 async function loadPdf(data: ArrayBuffer) {

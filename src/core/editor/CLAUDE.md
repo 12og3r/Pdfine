@@ -9,7 +9,7 @@ Text editing engine — manages editing lifecycle, input handling, cursor/select
 Central orchestrator implementing `IEditEngine`. Facade coordinating all sub-managers.
 - Edit mode lifecycle: `enterEditMode(blockId)` / `exitEditMode()`
 - Routes input events to InputHandler/ImeHandler
-- Handles keyboard shortcuts (arrows, Ctrl+Z/Y, Ctrl+B/I). Enter inserts a newline via `handleKeyDown` → `inputHandler.handleInsertNewline()` (with `preventDefault()` to keep textarea in sync); Escape exits edit mode. Users confirm edits via the Apply button in EditorCanvas.
+- Handles keyboard shortcuts (arrows, Ctrl+Z/Y, Ctrl+B/I). Enter exits edit mode (confirms edits); Shift+Enter inserts a newline via `inputHandler.handleInsertNewline()`; Escape also exits edit mode.
 - Emits events: editStart, editEnd, textChanged, styleAtCursor, historyChanged
 
 ### CursorManager.ts
