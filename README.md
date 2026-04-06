@@ -2,21 +2,23 @@
 
 <br />
 
-```
- ██████╗ ██████╗ ███████╗██╗███╗   ██╗███████╗
- ██╔══██╗██╔══██╗██╔════╝██║████╗  ██║██╔════╝
- ██████╔╝██║  ██║█████╗  ██║██╔██╗ ██║█████╗
- ██╔═══╝ ██║  ██║██╔══╝  ██║██║╚██╗██║██╔══╝
- ██║     ██████╔╝██║     ██║██║ ╚████║███████╗
- ╚═╝     ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═══╝╚══════╝
-```
+<pre>
+██████╗ ██████╗ ███████╗██╗███╗   ██╗███████╗
+██╔══██╗██╔══██╗██╔════╝██║████╗  ██║██╔════╝
+██████╔╝██║  ██║█████╗  ██║██╔██╗ ██║█████╗  
+██╔═══╝ ██║  ██║██╔══╝  ██║██║╚██╗██║██╔══╝  
+██║     ██████╔╝██║     ██║██║ ╚████║███████╗
+╚═╝     ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═══╝╚══════╝
+</pre>
 
-**Edit PDFs, *beautifully*.**
+**Edit PDFs directly in the browser — typography preserved, privacy guaranteed.**
 
-A private, browser-based PDF editor that preserves your document's typography.
-<br />No uploads. No accounts. No compromises.
+All parsing, editing, reflow, and export happen 100% client-side.
+<br />No uploads. No accounts. No backend.
 
 <br />
+
+[<img src="https://img.shields.io/badge/Try_Live_Demo-6366F1?style=for-the-badge&logoColor=white" alt="Live Demo" />](https://12og3r.github.io/Pdfine/)
 
 [<img src="https://img.shields.io/badge/100%25_Client--Side-6366F1?style=for-the-badge&logoColor=white" alt="Client-Side" />](.)
 [<img src="https://img.shields.io/badge/Zero_Uploads-06B6D4?style=for-the-badge&logoColor=white" alt="No Uploads" />](.)
@@ -62,7 +64,7 @@ Your files **never leave your device**. All parsing, editing, and exporting happ
 
 ### 🔤 Typography Preserved
 
-Edit text while keeping the **original fonts, sizes, weights, and colors** intact. Automatic text reflow adjusts layout as you type — just like a word processor.
+Edit text while keeping the **original fonts, sizes, weights, and colors** intact. Automatic text reflow with PDF-native line heights and per-line character widths — text stays exactly where it was.
 
 </td>
 <td width="33%" valign="top">
@@ -88,7 +90,7 @@ Canvas-based rendering with **character-level precision**. What you see is exact
 
 ### ✂️ Full Editing
 
-Cursor navigation, text selection, copy/paste, **undo/redo**, IME input (CJK), and keyboard shortcuts — everything you expect.
+Cursor navigation, text selection, copy/paste, **undo/redo**, IME input (CJK), and keyboard shortcuts. Enter to confirm, Shift+Enter for new lines, Escape to cancel.
 
 </td>
 <td width="33%" valign="top">
@@ -140,7 +142,7 @@ Save your edits as a new PDF with **embedded fonts**, preserving the original do
 
 ```bash
 # Clone
-git clone <repo-url> && cd pdf-editor
+git clone https://github.com/12og3r/Pdfine.git && cd Pdfine
 
 # Install dependencies
 pnpm install
@@ -150,6 +152,8 @@ pnpm dev
 ```
 
 Open **http://localhost:5173** — drop a PDF and start editing.
+
+> **Live demo**: [12og3r.github.io/Pdfine](https://12og3r.github.io/Pdfine/)
 
 ### Build
 
