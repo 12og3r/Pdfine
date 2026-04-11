@@ -119,6 +119,56 @@ describe('PDF line height preservation', () => {
     expect(paragraph.pdfLineHeight).toBeUndefined()
   })
 
+  it('should align subsequent-line baselines with PDF baseline-to-baseline distance when ascents differ', () => {
+    // Reproduces the "Created for testing PDFObject" shift bug.
+    //
+    // Two-line paragraph where line 1 is large (36pt) and line 2 is small (18pt).
+    // The PDF baselines are 39.84px apart, and we want the Canvas-rendered line 2
+    // baseline to be exactly 39.84 below line 1's baseline, regardless of the
+    // ascent difference between the two fonts.
+    //
+    // Before the fix, the layout just did `currentY += lineHeight` where
+    // lineHeight = pdfLineHeight. That advance works only when lines share an
+    // ascent; with different ascents the next line's baseline is off by
+    // (ascent_prev - ascent_curr), which manifests as a 17px upward shift for
+    // the subtitle in example_en.pdf.
+    const items: RawTextItem[] = [
+      makeItem({
+        text: 'Title', x: 0, y: 36, // baseline y=36 (top at y=0)
+        width: 100, height: 36, fontSize: 36,
+        pdfItemWidth: 100,
+      }),
+      makeItem({
+        text: 'Subtitle', x: 0, y: 75.84, // baseline y=75.84, so gap=39.84
+        width: 80, height: 18, fontSize: 18,
+        pdfItemWidth: 80,
+      }),
+    ]
+    const blocks = builder.buildBlocks(items)
+    expect(blocks.length).toBe(1)
+    const block = blocks[0]
+    const reflowed = layoutEngine.reflowTextBlock(block, mockFontManager)
+    const lines = reflowed.paragraphs[0].lines!
+    expect(lines.length).toBe(2)
+
+    // With mockFontManager ascent = fontSize * 0.8:
+    //   ascent_36 = 28.8, ascent_18 = 14.4
+    //
+    // Line 0 baseline at 28.8 (first line top=0 + ascent_36=28.8).
+    expect(lines[0].baseline).toBeCloseTo(28.8, 1)
+    // Line 1 baseline MUST be pdfLineHeight (39.84) below line 0's baseline
+    // regardless of the ascent change. Before the fix it was 28.8 + 14.4 = 43.2
+    // (top=39.84 + ascent_18=14.4), off by ~25.
+    expect(lines[1].baseline).toBeCloseTo(28.8 + 39.84, 1)
+
+    // The first glyph of line 1 (the Subtitle "S") must render at that
+    // baseline when Canvas fillText uses `y = bounds.y + glyph.y + charAscent`,
+    // i.e. `glyph.y + charAscent === line.baseline`. For an 18pt 'S' with
+    // ascent 14.4, glyph.y should be 68.64 - 14.4 = 54.24.
+    const line1FirstGlyph = lines[1].glyphs[0]
+    expect(line1FirstGlyph.y + 14.4).toBeCloseTo(68.64, 1)
+  })
+
   it('total layout height should match PDF bounds height after reflow', () => {
     // PDF baselines at y=12, y=27, y=42
     // bounds.height from parser = maxY - minY = 42 - (12-12) = 42
@@ -134,7 +184,7 @@ describe('PDF line height preservation', () => {
     const lines = reflowed.paragraphs[0].lines!
 
     const lastLine = lines[lines.length - 1]
-    const totalLayoutHeight = lastLine.y + lastLine.height
+    expect(lastLine.y + lastLine.height).toBeGreaterThan(0)
 
     // The layout height should be close to the bounds height
     // With pdfLineHeight=15: total = 15*3 = 45 ≈ bounds.height=42

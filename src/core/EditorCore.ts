@@ -165,6 +165,22 @@ export class EditorCore implements IEditorCore {
     if (!this.documentModel) return
     const clamped = Math.max(0, Math.min(page, this.documentModel.pages.length - 1))
     if (clamped === this.currentPage) return
+
+    // Exit edit mode before switching pages — otherwise the edit state stays
+    // pinned to the previous page's block while the viewport moves, and a
+    // subsequent double-click on the new page re-enters edit mode without
+    // producing an `isEditing` false→true transition. TextEditInput only
+    // re-focuses the hidden textarea on that transition, so without this
+    // exit, keystrokes get swallowed by whatever element still holds focus
+    // (typically the PageNavigator chevron button that triggered the nav).
+    if (this.editEngine?.isEditing()) {
+      this.editEngine.exitEditMode()
+      // Clear the render engine's editing-block reference so its white
+      // overlay / canvas re-render path doesn't still key off the previous
+      // page's block id.
+      this.renderEngine.setEditingBlockId(null)
+    }
+
     this.currentPage = clamped
 
     const pageModel = this.documentModel.pages[clamped]

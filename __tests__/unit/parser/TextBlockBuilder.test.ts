@@ -46,6 +46,68 @@ describe('TextBlockBuilder pdfRunWidth preservation', () => {
     expect(run.pdfRunWidth).toBeUndefined();
   });
 
+  it('should detect centered alignment when paragraph lines share a common center', () => {
+    // Reproduces the bug where "Sample PDF" (narrower) and "Created for testing PDFObject"
+    // (wider) are both visually centered in the PDF but end up in the same text block.
+    // Before the fix, alignment was hardcoded to 'left', causing the narrower line to
+    // render at bounds.x + 0 (left of its original x) on edit mode entry.
+    //
+    // Line 1: "Sample PDF" - starts at x=190.31, width=231.66 → ends at 421.97, center 306.14
+    // Line 2: "Created for testing PDFObject" - starts at x=179.47, width=253.34 → ends at 432.81, center 306.14
+    const items: RawTextItem[] = [
+      makeItem({
+        text: 'Sample PDF',
+        x: 190.31, y: 84.1,  // baseline y=84.1 (line 1)
+        width: 231.66, height: 36, fontSize: 36, fontId: 'BigFont',
+        pdfItemWidth: 231.66,
+      }),
+      makeItem({
+        text: 'Created for testing PDFObject',
+        x: 179.47, y: 123.94,  // baseline y=123.94 (line 2, pdfLineHeight ≈ 39.84)
+        width: 253.34, height: 18, fontSize: 18, fontId: 'SmallFont',
+        pdfItemWidth: 253.34,
+      }),
+    ];
+
+    const blocks = builder.buildBlocks(items);
+    expect(blocks.length).toBe(1);
+    const block = blocks[0];
+
+    // The block bounds should span the widest line
+    expect(block.bounds.x).toBeCloseTo(179.47, 1);
+    expect(block.bounds.width).toBeCloseTo(253.34, 1);
+
+    // The paragraph's alignment should be detected as 'center' since both lines
+    // share the same visual center (306.14)
+    expect(block.paragraphs[0].alignment).toBe('center');
+  });
+
+  it('should keep left alignment when lines share a common left edge', () => {
+    // Normal left-aligned paragraph: all lines start at the same x.
+    const items: RawTextItem[] = [
+      makeItem({ text: 'This is line one.', x: 36.14, y: 12, width: 96, pdfItemWidth: 96 }),
+      makeItem({ text: 'This is line two.', x: 36.14, y: 26, width: 96, pdfItemWidth: 96 }),
+      makeItem({ text: 'This is line three.', x: 36.14, y: 40, width: 108, pdfItemWidth: 108 }),
+    ];
+
+    const blocks = builder.buildBlocks(items);
+    expect(blocks.length).toBe(1);
+    expect(blocks[0].paragraphs[0].alignment).toBe('left');
+  });
+
+  it('should detect right alignment when lines share a common right edge', () => {
+    // Lines right-aligned: same maxX but different minX.
+    const items: RawTextItem[] = [
+      makeItem({ text: 'short', x: 100, y: 12, width: 30, pdfItemWidth: 30 }),
+      makeItem({ text: 'a bit longer', x: 70, y: 26, width: 60, pdfItemWidth: 60 }),
+    ];
+
+    const blocks = builder.buildBlocks(items);
+    expect(blocks.length).toBe(1);
+    // minX for line 1 = 100, for line 2 = 70. maxX for line 1 = 130, for line 2 = 130.
+    expect(blocks[0].paragraphs[0].alignment).toBe('right');
+  });
+
   it('should use item.width as fallback when pdfItemWidth is missing on merged item', () => {
     // Two items on the same line, same style. First has pdfItemWidth, second doesn't.
     const items: RawTextItem[] = [

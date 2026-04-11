@@ -36,6 +36,7 @@ Groups raw text items into logical blocks, paragraphs, and runs.
 - Inter-line join uses `\n` (not space) to preserve original PDF line breaks; `\n` has zero width so no pdfRunWidth adjustment is needed; the GreedyLineBreaker treats `\n` as hard breaks
 - Tracks per-line PDF widths (`TextRun.pdfLineWidths`) for multi-line runs: when `\n` is inserted between lines, the accumulated pdfRunWidth for that line segment is snapshotted into `pdfLineWidths`, enabling per-segment proportional width scaling in ParagraphLayout (prevents cross-line width contamination)
 - Computes `pdfLineHeight` (average baseline-to-baseline distance) per paragraph from raw PDF line Y positions; stored on `Paragraph.pdfLineHeight` so the layout engine can reproduce the PDF's native line spacing instead of using `DEFAULT_LINE_SPACING`
+- Detects paragraph alignment (`detectAlignment`) from each paragraph's line x-extents instead of hardcoding `'left'`. PDF text is drawn at explicit `(x, y)` — a visually-centered paragraph has each line at its own centered x, not a shared left edge. Priority: same minX → `left`, same visual center → `center`, same maxX → `right`, fallback `left`. Tolerance is `max(2, dominantFontSize * 0.1)`. Without this, a multi-line centered block (e.g. the "Sample PDF / Created for testing PDFObject" title) would have its narrower line snap to the widest line's minX on edit-mode entry, causing a visible ~11px horizontal shift
 
 ### ImageExtractor.ts
 Extracts embedded images from PDF operator list.

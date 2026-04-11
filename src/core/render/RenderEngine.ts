@@ -174,8 +174,14 @@ export class RenderEngine implements IRenderEngine {
         const uy = Math.min(el.bounds.y, ob.y);
         const uw = Math.max(el.bounds.x + el.bounds.width, ob.x + ob.width) - ux;
         const uh = Math.max(el.bounds.y + el.bounds.height, ob.y + ob.height) - uy;
+        // Small safety pad covers anti-aliased edges that leak past the
+        // nominal bounds rectangle. We used to use `max(4, fontSize)` here,
+        // but that was up to a full em of overhang (36+ px on the 36pt
+        // "Sample PDF" title), which ate the first line of the body
+        // paragraph below the title. The bounds already include ascent /
+        // descent, so a couple pixels is enough.
         const fontSize = el.paragraphs[0]?.runs[0]?.style.fontSize ?? 12;
-        const pad = Math.max(4, fontSize) * scale;
+        const pad = Math.max(2, fontSize * 0.12) * scale;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(
           ux * scale - pad,

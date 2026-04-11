@@ -49,8 +49,21 @@ export class ParagraphLayout {
     }
 
     let currentY = startY;
+    // When a paragraph spans multiple lines with differing fonts, the first
+    // line's ascent anchors every line's baseline so that the PDF's
+    // baseline-to-baseline distance (`pdfLineHeight`) lands exactly where
+    // pdfjs rasterized it. Passing each line its OWN ascent as the baseline
+    // offset causes subsequent lines with a smaller ascent to render
+    // `(firstAscent - thisAscent)` px above the original pdfjs baseline —
+    // visible on the "Sample PDF / Created for testing PDFObject" title as a
+    // 17 px upward shift of the subtitle on edit-mode entry. Locking the
+    // offset to the first line's ascent keeps `lineY += lineHeight` accounting
+    // intact (so contentHeight / overflow detection don't change) while still
+    // placing glyphs at the right absolute baseline.
+    let anchorBaselineOffset: number | undefined;
 
-    for (const [lineStart, lineEnd] of lineRanges) {
+    for (let li = 0; li < lineRanges.length; li++) {
+      const [lineStart, lineEnd] = lineRanges[li];
       const lineChars = chars.slice(lineStart, lineEnd);
       // Trim trailing spaces/newlines from the line for width calculation
       let trimmedEnd = lineChars.length;
@@ -64,7 +77,17 @@ export class ParagraphLayout {
       const lineHeight = this.measurer.getLineHeight(
         dominantStyle.fontSize, paragraph.lineSpacing, dominantStyle.fontId, fontManager, paragraph.pdfLineHeight,
       );
-      const baseline = this.measurer.getBaseline(dominantStyle.fontSize, dominantStyle.fontId, fontManager);
+      const thisLineBaseline = this.measurer.getBaseline(dominantStyle.fontSize, dominantStyle.fontId, fontManager);
+      // Lock the effective baseline offset to the first line's value when we
+      // have a PDF-derived line height — every line then shares the same
+      // offset-from-lineY to baseline, so `lineY + effBaseline` walks in
+      // `pdfLineHeight` increments exactly like pdfjs.
+      if (anchorBaselineOffset === undefined) {
+        anchorBaselineOffset = thisLineBaseline;
+      }
+      const effBaseline = paragraph.pdfLineHeight !== undefined
+        ? anchorBaselineOffset
+        : thisLineBaseline;
 
       // Measure total content width
       let contentWidth = 0;
@@ -75,12 +98,12 @@ export class ParagraphLayout {
 
       // Position glyphs based on alignment
       const glyphs = this.positionGlyphs(
-        trimmedChars, paragraph.alignment, maxWidth, contentWidth, currentY, baseline, fontManager,
+        trimmedChars, paragraph.alignment, maxWidth, contentWidth, currentY, effBaseline, fontManager,
       );
 
       lines.push({
         glyphs,
-        baseline: currentY + baseline,
+        baseline: currentY + effBaseline,
         width: contentWidth,
         height: lineHeight,
         y: currentY,

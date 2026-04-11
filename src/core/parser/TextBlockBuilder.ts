@@ -180,6 +180,9 @@ export class TextBlockBuilder {
     let prevLineY = group.lines[0].y;
     // Track baseline Y positions per paragraph to compute pdfLineHeight
     let currentLineYs: number[] = [group.lines[0].y];
+    // Track the lines that belong to the current paragraph so we can detect
+    // their shared alignment (left/center/right) from their original x extents.
+    let currentParaLines: TextLine[] = [group.lines[0]];
 
     for (let li = 0; li < group.lines.length; li++) {
       const line = group.lines[li];
@@ -198,14 +201,16 @@ export class TextBlockBuilder {
                 run.pdfRunWidth = undefined;
               }
             }
-            const para = createParagraph(currentRuns, 'left', DEFAULT_LINE_SPACING);
+            const para = createParagraph(currentRuns, this.detectAlignment(currentParaLines), DEFAULT_LINE_SPACING);
             para.pdfLineHeight = this.computePdfLineHeight(currentLineYs);
             paragraphs.push(para);
             currentRuns = [];
             currentLineYs = [];
+            currentParaLines = [];
           }
         }
         currentLineYs.push(line.y);
+        currentParaLines.push(line);
       }
 
       // Build runs from items on this line
@@ -287,7 +292,7 @@ export class TextBlockBuilder {
           run.pdfRunWidth = undefined;  // now fully tracked per-line
         }
       }
-      const para = createParagraph(currentRuns, 'left', DEFAULT_LINE_SPACING);
+      const para = createParagraph(currentRuns, this.detectAlignment(currentParaLines), DEFAULT_LINE_SPACING);
       para.pdfLineHeight = this.computePdfLineHeight(currentLineYs);
       paragraphs.push(para);
     }
@@ -298,6 +303,49 @@ export class TextBlockBuilder {
     }
 
     return createTextBlock(paragraphs, bounds, group.editable);
+  }
+
+  /**
+   * Detect the paragraph's horizontal alignment from the x extents of its lines.
+   *
+   * PDF text is drawn at explicit (x, y) positions, so a "centered" paragraph
+   * in the source PDF has each line positioned at its own centered x — the
+   * lines don't share a left edge. When we aggregate such lines into a single
+   * TextBlock, `bounds.x = min(line.minX)` anchors the block to the widest
+   * line. Without detecting alignment, the layout engine would left-align all
+   * lines at `bounds.x`, shifting the narrower lines leftward on edit-mode
+   * entry (visible as a 10–15px horizontal jump for centered titles).
+   *
+   * Detection priority:
+   *  1. Single line → 'left' (no evidence for anything else).
+   *  2. All lines share the same minX (and right edges match too) → 'left'
+   *     (handles ordinary left-aligned/justified paragraphs).
+   *  3. All lines share the same minX → 'left'.
+   *  4. All lines share the same visual center → 'center'.
+   *  5. All lines share the same maxX → 'right'.
+   *  6. Fallback → 'left'.
+   */
+  private detectAlignment(lines: TextLine[]): Paragraph['alignment'] {
+    if (lines.length < 2) return 'left';
+    // Tolerance is relative to the dominant font size — subpixel rounding and
+    // kerning can jitter line edges by a fraction of an em.
+    const dominantFontSize = Math.max(
+      ...lines.flatMap(l => l.items.map(it => it.fontSize)),
+    );
+    const tolerance = Math.max(2, dominantFontSize * 0.1);
+
+    const minXs = lines.map(l => l.minX);
+    const maxXs = lines.map(l => l.maxX);
+    const centers = lines.map(l => (l.minX + l.maxX) / 2);
+
+    const sameLeft = Math.max(...minXs) - Math.min(...minXs) <= tolerance;
+    const sameRight = Math.max(...maxXs) - Math.min(...maxXs) <= tolerance;
+    const sameCenter = Math.max(...centers) - Math.min(...centers) <= tolerance;
+
+    if (sameLeft) return 'left';
+    if (sameCenter) return 'center';
+    if (sameRight) return 'right';
+    return 'left';
   }
 
   private computePdfLineHeight(lineYs: number[]): number | undefined {

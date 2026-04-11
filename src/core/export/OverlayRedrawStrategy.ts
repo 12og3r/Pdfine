@@ -61,14 +61,21 @@ export class OverlayRedrawStrategy {
 
           const { px, py } = transformer.layoutToPdf(layoutX, layoutY);
 
+          // Our `Color` type stores channels as 0-255 ints (that's what the
+          // parser / pdf.js operator list feeds us); pdf-lib's `rgb()` needs
+          // 0-1. Normalize and clamp defensively — out-of-range values would
+          // otherwise throw `assertRange` and abort the whole export (seen
+          // after the color-extraction fix on the blue "Sample PDF" title,
+          // rgb(46, 116, 181)).
           const { r, g, b } = glyph.style.color;
+          const toUnit = (v: number) => Math.min(1, Math.max(0, v / 255));
 
           page.drawText(glyph.char, {
             x: px,
             y: py,
             size: glyph.style.fontSize,
             font,
-            color: rgb(r, g, b),
+            color: rgb(toUnit(r), toUnit(g), toUnit(b)),
           });
         }
       }

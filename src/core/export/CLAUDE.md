@@ -32,6 +32,7 @@ Redraws edited text using white rectangle overlay.
 - Redraws glyphs character-by-character with correct font/size/color
 - Skips space characters
 - Coordinates transformed from layout (Y-down) to PDF (Y-up) via CoordinateTransformer
+- **Color normalization**: `Color` stores channels as 0-255 ints (from the pdfjs operator-list parser), but `pdf-lib`'s `rgb()` expects 0-1. `redrawText` divides by 255 and clamps to `[0, 1]` before calling `rgb()`. Without this, any non-black run aborts the export with `assertRange` — first surfaced after the color-extraction fix (commit 21829f8) made blue/red titles exportable
 
 ## Export Pipeline
 ```

@@ -13,6 +13,7 @@ Main orchestrator implementing `IRenderEngine`.
 - `getPageOffset()` — returns page position for mouse→page coord conversion, accounts for scroll offsets
 - Tracks modified blocks to preserve edited text after exiting edit mode
 - White overlay + canvas re-render activates when `editingBlockDirty` is true
+- White overlay padding uses `max(2, fontSize * 0.12) * scale`. Used to be `max(4, fontSize) * scale`, which for a 36pt title produced a 36 px pad that covered the first line of the following paragraph. The ascent / descent of the rendered text is already inside the block bounds, so a couple of pixels of safety for anti-aliasing is all that's needed
 - `markEditingBlockDirty()` — called by EditorCore on both edit mode entry and text changes to activate overlay rendering
 - Hover/editing highlights: renders rounded-rect backgrounds for hovered (`TEXT_HOVER_BG_COLOR`) and editing (`TEXT_EDITING_BG_COLOR`) editable text blocks
 - `setHoveredBlockId()` / `getHoveredBlockId()` — manages hover state for text block highlighting

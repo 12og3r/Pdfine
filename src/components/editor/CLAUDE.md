@@ -25,6 +25,7 @@ Hidden textarea that captures keyboard and IME composition events during text ed
 - Uses `position: fixed` to stay outside the scroll container's flow — prevents browser from scrolling the container to make the textarea visible on input
 - Proxies input, keydown, and composition events to editorCore
 - Hidden with `opacity-0 w-px h-px`, transparent caret
+- **Focus re-entry requires an `isEditing` false→true transition.** The focus `useEffect` only fires when `isEditing` flips, so moving between blocks in different pages without first exiting edit mode leaves focus on whatever element (e.g. a PageNavigator button) interrupted editing. `EditorCore.setCurrentPage()` exits edit mode before switching pages so every new double-click produces a real transition.
 
 ## Patterns
 - **Event delegation**: All canvas/input events forwarded to `editorCore`
