@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const VISA_PDF = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../example/example_en.pdf')
 
 async function uploadAndWaitForRender(page: import('@playwright/test').Page) {
   await page.goto('/')
@@ -179,20 +181,20 @@ test.describe('Bug: Text reflow after insertion causes wrong line breaks', () =>
   })
 
   /**
-   * Bug: In the block "Visitor visa application approved We have approved...",
-   * the original PDF has "Visitor visa application approved" on line 1 and
-   * "We have approved..." starting on line 2. But after the layout engine
+   * Bug: In the block "This PDF is three than the other...",
+   * the original PDF has "This PDF is three" on line 1 and
+   * "than the other..." starting on line 2. But after the layout engine
    * measures with Canvas (which gives narrower widths for some runs missing
-   * PDF width data), "We have approved..." gets pulled onto line 1.
+   * PDF width data), "than the other..." gets pulled onto line 1.
    *
    * After inserting a single character, the text should reflow only minimally.
    * The line structure should NOT change drastically (e.g., entire phrases
    * jumping between lines).
    */
-  test('"We have approved..." should not jump to line 1 after inserting a character', async ({ page }) => {
+  test('"than the other..." should not jump to line 1 after inserting a character', async ({ page }) => {
     // Find the block containing the multi-line text
-    const blockInfo = await getBlockInfo(page, 'Visitor visa application approved', 3)
-    expect(blockInfo, '"Visitor visa application approved" block not found').not.toBeNull()
+    const blockInfo = await getBlockInfo(page, 'This PDF is three', 3)
+    expect(blockInfo, '"This PDF is three" block not found').not.toBeNull()
 
     console.log(`Block: "${blockInfo!.fullText}"`)
     console.log(`Bounds: ${blockInfo!.boundsWidth.toFixed(1)} x ${blockInfo!.boundsHeight.toFixed(1)}`)
@@ -205,9 +207,9 @@ test.describe('Bug: Text reflow after insertion causes wrong line breaks', () =>
       console.log(`  "${r.text.slice(0, 40)}${r.text.length > 40 ? '...' : ''}" font=${r.fontId}@${r.fontSize} pdfRunWidth=${r.hasPdfRunWidth} pdfCharWidths=${r.hasPdfCharWidths}`)
     )
 
-    // Record which line "We have" starts on
-    const weHaveLineBefore = blockInfo!.lines.findIndex(l => l.text.includes('We have'))
-    console.log(`"We have" is on line index ${weHaveLineBefore} BEFORE edit`)
+    // Record which line "than the" starts on
+    const weHaveLineBefore = blockInfo!.lines.findIndex(l => l.text.includes('than the'))
+    console.log(`"than the" is on line index ${weHaveLineBefore} BEFORE edit`)
 
     // Also record line count and first-line text length
     const lineCountBefore = blockInfo!.lineCount
@@ -232,11 +234,11 @@ test.describe('Bug: Text reflow after insertion causes wrong line breaks', () =>
       console.log(`  Line ${i}: "${l.text}" (y=${l.y.toFixed(1)}, w=${l.width.toFixed(1)}, ${l.glyphCount} glyphs)`)
     )
 
-    const weHaveLineAfterEntry = linesAfterEntry!.findIndex(l => l.text.includes('We have'))
-    console.log(`"We have" is on line index ${weHaveLineAfterEntry} AFTER edit entry`)
+    const weHaveLineAfterEntry = linesAfterEntry!.findIndex(l => l.text.includes('than the'))
+    console.log(`"than the" is on line index ${weHaveLineAfterEntry} AFTER edit entry`)
 
-    // ASSERTION: Just entering edit mode should not cause "We have" to jump lines
-    // If the original PDF had "We have" on a certain line, edit mode entry
+    // ASSERTION: Just entering edit mode should not cause "than the" to jump lines
+    // If the original PDF had "than the" on a certain line, edit mode entry
     // should preserve that (the initial layout should match the PDF layout)
     expect(
       linesAfterEntry!.length,
@@ -261,8 +263,8 @@ test.describe('Bug: Text reflow after insertion causes wrong line breaks', () =>
       console.log(`  Line ${i}: "${l.text}" (y=${l.y.toFixed(1)}, w=${l.width.toFixed(1)}, ${l.glyphCount} glyphs)`)
     )
 
-    const weHaveLineAfterType = linesAfterType!.findIndex(l => l.text.includes('We have'))
-    console.log(`"We have" is on line index ${weHaveLineAfterType} AFTER typing`)
+    const weHaveLineAfterType = linesAfterType!.findIndex(l => l.text.includes('than the'))
+    console.log(`"than the" is on line index ${weHaveLineAfterType} AFTER typing`)
 
     // ASSERTION: Adding one character should not cause dramatic reflow
     // The line count may increase by 1 (the extra char pushes text to a new line)
@@ -273,11 +275,11 @@ test.describe('Bug: Text reflow after insertion causes wrong line breaks', () =>
       `Text is being measured narrower than the PDF original, causing wrong line breaks.`
     ).toBeGreaterThanOrEqual(lineCountBefore)
 
-    // ASSERTION: "We have" should not move to an earlier line
+    // ASSERTION: "than the" should not move to an earlier line
     if (weHaveLineBefore >= 0) {
       expect(
         weHaveLineAfterType,
-        `"We have approved..." jumped from line ${weHaveLineBefore} to line ${weHaveLineAfterType} after insertion. ` +
+        `"than the other..." jumped from line ${weHaveLineBefore} to line ${weHaveLineAfterType} after insertion. ` +
         `Expected it to stay on the same line or move to a later line.`
       ).toBeGreaterThanOrEqual(weHaveLineBefore)
     }
@@ -298,7 +300,7 @@ test.describe('Bug: Text reflow after insertion causes wrong line breaks', () =>
    * reasonable layout (not dramatically different from PDF original).
    */
   test('all runs in multi-font block should have PDF width data', async ({ page }) => {
-    const blockInfo = await getBlockInfo(page, 'Visitor visa application approved', 0)
+    const blockInfo = await getBlockInfo(page, 'This PDF is three', 0)
     expect(blockInfo).not.toBeNull()
 
     console.log('Runs in block:')

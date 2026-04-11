@@ -6,7 +6,7 @@ import { execSync } from 'child_process'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
+const VISA_PDF = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../example/example_en.pdf')
 
 test('exported PDF should contain edited text', async ({ page }) => {
   const logs: string[] = []

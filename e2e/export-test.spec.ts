@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import fs from 'fs'
 
-const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
+const VISA_PDF = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../example/example_en.pdf')
 
 async function uploadAndWaitForRender(page: import('@playwright/test').Page) {
   await page.goto('/')
@@ -87,6 +89,7 @@ test('Export after edit should preserve changes', async ({ page }) => {
   page.on('pageerror', err => errors.push(err.message))
 
   await uploadAndWaitForRender(page)
+  await page.waitForTimeout(500)
 
   // Double-click to edit
   const pos = await page.evaluate(() => {
