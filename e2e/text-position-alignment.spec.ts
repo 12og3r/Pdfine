@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const VISA_PDF = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../example/example_en.pdf')
 
 async function uploadAndWaitForRender(page: import('@playwright/test').Page) {
   await page.goto('/')

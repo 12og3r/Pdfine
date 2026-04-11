@@ -1,4 +1,4 @@
-import type { TextBlock, Color } from '../../types/document';
+import type { TextBlock, Color, TextStyle } from '../../types/document';
 import type { IFontManager } from '../interfaces/IFontManager';
 import { OVERFLOW_BORDER_COLOR } from '../../config/constants';
 
@@ -9,6 +9,36 @@ function colorToCSS(color: Color): string {
 
 function alignPixel(value: number, dpr: number): number {
   return Math.round(value * dpr) / dpr;
+}
+
+/**
+ * Compute the weight and style strings to put into `ctx.font`.
+ *
+ * If a FontFace has been registered for this fontId (by either pdfjs or our
+ * own FontManager), prefer the FontFace's own weight/style — so the browser
+ * picks it as an exact match and skips `font-synthesis`. Requesting a weight
+ * that doesn't match any registered face would otherwise let Chrome apply
+ * faux-bold on top of an already-bold font file, making glyphs visibly
+ * thicker than the pdfjs raster on edit-mode entry.
+ *
+ * Falls back to the run style's values when no FontFace is registered.
+ */
+function resolveFontDescriptors(
+  style: TextStyle,
+  face: FontFace | null,
+): { ctxWeight: string; ctxStyle: string } {
+  if (face) {
+    const faceWeight = (face.weight ?? 'normal').trim();
+    const faceStyle = (face.style ?? 'normal').trim();
+    return {
+      ctxWeight: faceWeight === '' ? 'normal' : faceWeight,
+      ctxStyle: faceStyle === 'italic' || faceStyle === 'oblique' ? 'italic' : '',
+    };
+  }
+  return {
+    ctxWeight: String(style.fontWeight),
+    ctxStyle: style.fontStyle === 'italic' ? 'italic' : '',
+  };
 }
 
 export class TextRenderer {
@@ -40,11 +70,18 @@ export class TextRenderer {
       for (const line of paragraph.lines) {
         for (const glyph of line.glyphs) {
           const fontSize = glyph.style.fontSize * scale;
-          const fontStyle = glyph.style.fontStyle === 'italic' ? 'italic' : '';
-          const fontWeight = glyph.style.fontWeight;
+
+          // When a FontFace is registered (either by pdfjs or by FontManager),
+          // use the FontFace's OWN weight/style in ctx.font so the browser
+          // picks it exactly and skips `font-synthesis: weight/style` —
+          // otherwise an already-bold glyph file requested via weight=700
+          // would get faux-bold on top of real bold, making glyphs visibly
+          // thicker than the pdfjs raster.
+          const registeredFace = this.fontManager?.getFont(glyph.style.fontId)?.fontFace ?? null;
+          const { ctxWeight, ctxStyle } = resolveFontDescriptors(glyph.style, registeredFace);
 
           const fontFamily = this.resolveFontFamily(glyph.style.fontId);
-          ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`.trim();
+          ctx.font = `${ctxStyle} ${ctxWeight} ${fontSize}px ${fontFamily}`.trim();
           ctx.fillStyle = colorToCSS(glyph.style.color);
 
           // glyph.y is the top of the glyph area (lineY + lineBaseline - charAscent).

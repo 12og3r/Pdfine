@@ -107,7 +107,7 @@ src/
 │   └── ui/                     # Button, Modal, Tooltip, ColorPicker, FontSelector
 ├── core/
 │   ├── EditorCore.ts           # Central orchestrator
-│   ├── parser/                 # PdfParser, TextBlockBuilder, ImageExtractor, PathExtractor
+│   ├── parser/                 # PdfParser, TextBlockBuilder, ImageExtractor, PathExtractor, TextColorExtractor
 │   ├── model/                  # DocumentModel factory functions
 │   ├── layout/                 # LayoutEngine, ParagraphLayout, line breakers, OverflowHandler
 │   ├── render/                 # RenderEngine, TextRenderer, ImageRenderer, HitTester, etc.

@@ -8,10 +8,20 @@ PDF parsing engine — extracts structured content (text, images, vector paths) 
 ### PdfParser.ts
 Main orchestrator implementing `IPdfParser`.
 - `parse(data, password?)` — loads PDF, processes all pages, returns DocumentModel
-- Coordinates TextBlockBuilder, ImageExtractor, PathExtractor
+- Coordinates TextBlockBuilder, ImageExtractor, PathExtractor, TextColorExtractor
 - Converts PDF coordinates (bottom-left origin) to layout coordinates (top-left origin)
 - Stores pdfDoc reference in DocumentModel for later font extraction
 - Passes total PDF item width as `pdfItemWidth` on `RawTextItem` (proportional per-char widths are computed at layout time)
+- Per-page operator list is fetched once and reused for color extraction, image extraction, and path extraction
+- `convertTextItems` consumes `ColoredSegment[]` from `TextColorExtractor` and emits one `RawTextItem` per color segment, splitting `x` / `width` / `pdfItemWidth` proportionally so multi-color merged text items become separate runs downstream
+
+### TextColorExtractor.ts
+Resolves text fill colors from the pdfjs operator list (since `getTextContent()` does not expose color).
+- `extractTextColorEvents(opList, ops)` — walks the operator list, tracking the active fill color through `setFillRGBColor` / `setFillGray` / `setFillCMYKColor` ops, and emits one `TextColorEvent { text, color }` per text-showing op (`showText` / `showSpacedText` / `nextLineShowText` / `nextLineSetSpacingShowText`)
+- `splitTextItemsByColor(items, events)` — aligns `getTextContent().items` against the color-event stream by sequential substring matching and splits each item into single-color `ColoredSegment[]` (preserving the source `itemIndex` and `startOffset` so positions can be split proportionally)
+- Pure helpers: accept structurally-typed `OperatorListLike` and `OpsConstants` so they don't import pdfjs and can be unit tested in jsdom
+- Handles both numeric color args and string CSS color args (`#rrggbb`)
+- Items that fail to match in the stream fall back to a single black segment
 
 ### TextBlockBuilder.ts
 Groups raw text items into logical blocks, paragraphs, and runs.

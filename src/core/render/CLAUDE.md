@@ -26,6 +26,7 @@ Async PDF page background rendering via pdfjs-dist.
 ### TextRenderer.ts
 Renders text blocks glyph-by-glyph.
 - **Font resolution**: `resolveFontFamily()` checks `IFontManager` for registered FontFace first, falls back to CSS heuristics via `mapFontFamily()`
+- **Weight/style resolution**: `resolveFontDescriptors()` — when a FontFace is registered, uses the FontFace's own `weight` / `style` in `ctx.font` instead of the run's style values, so the browser selects that face exactly and avoids `font-synthesis` (faux bold/italic). This prevents already-bold font files from being double-bolded when the run.style.fontWeight doesn't match what pdfjs registered the FontFace with (pdfjs typically registers with `weight="normal"` regardless of the font's actual weight). Falls back to the run style when no FontFace is registered.
 - Constructor accepts optional `IFontManager`; also settable via `setFontManager()`
 - `RenderEngine.setFontManager()` wires the font manager from EditorCore after PDF loading
 - Font mapping heuristics (fallback only): recognizes Courier, Times, Arial, Helvetica, etc.

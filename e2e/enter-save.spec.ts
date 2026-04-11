@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const VISA_PDF = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../example/example_en.pdf')
 
 test('Enter key should save edited text', async ({ page }) => {
   await page.goto('/')
@@ -92,11 +94,11 @@ async function scanEditArea(page: import('@playwright/test').Page) {
     const ctx = canvas.getContext('2d')!
     const w = canvas.width, h = canvas.height
     const data = ctx.getImageData(0, 0, w, h).data
-    const dpr = window.devicePixelRatio || 1
-    // Scan top 130 CSS pixels of the page area
+    // Scan the entire canvas — the original 130 CSS-pixel top window was
+    // tuned to the Visa fixture's top-of-page header and misses body-text
+    // edits in the middle of example_en.pdf pages.
     let dark = 0
-    const scanH = Math.min(h, 130 * dpr)
-    for (let row = 0; row < scanH; row++) {
+    for (let row = 0; row < h; row++) {
       for (let col = 0; col < w; col++) {
         const idx = (row * w + col) * 4
         if (data[idx] < 50 && data[idx + 1] < 50 && data[idx + 2] < 50) dark++

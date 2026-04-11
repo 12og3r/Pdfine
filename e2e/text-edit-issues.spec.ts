@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-const VISA_PDF = '/Users/bytedance/Desktop/example_en.pdf'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const VISA_PDF = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../example/example_en.pdf')
 
 async function uploadAndWaitForRender(page: import('@playwright/test').Page) {
   await page.goto('/')
@@ -82,6 +84,7 @@ test.describe('Text Edit Issues', () => {
 
   test('Issue 1: text position should not shift after double-click', async ({ page }) => {
     await uploadAndWaitForRender(page)
+    await page.waitForTimeout(500)
 
     // Capture text positions BEFORE double-click (PDF background rendering)
     await page.screenshot({ path: 'e2e/screenshots/issue1-01-before.png', fullPage: true })
@@ -121,6 +124,7 @@ test.describe('Text Edit Issues', () => {
 
   test('Issue 2: arrow keys should move cursor left/right', async ({ page }) => {
     await uploadAndWaitForRender(page)
+    await page.waitForTimeout(500)
 
     const pos = await findTextClick(page)
     expect(pos).not.toBeNull()
@@ -159,19 +163,18 @@ test.describe('Text Edit Issues', () => {
     await page.screenshot({ path: 'e2e/screenshots/issue2-03-final.png', fullPage: true })
 
     // Verify by checking the rendered text contains "ABXCYD"
-    // We do this by looking for distinct pixel patterns in the edited block
+    // We do this by looking for distinct pixel patterns in the edited block.
+    // Scan the whole canvas — the original 150px top window was tuned to the
+    // Visa fixture's top-of-page block and misses body-text edits elsewhere
+    // in example_en.pdf.
     const editedText = await page.evaluate(() => {
       const canvas = document.querySelector('canvas')!
       const ctx = canvas.getContext('2d')!
       const w = canvas.width, h = canvas.height
       const data = ctx.getImageData(0, 0, w, h).data
-      const dpr = window.devicePixelRatio || 1
 
-      // Find the edited text area (the block with white background overlay)
-      // Count dark pixels in the first 150 CSS pixels of the page
       let darkInEditArea = 0
-      const scanH = Math.min(h, 150 * dpr)
-      for (let row = 0; row < scanH; row++) {
+      for (let row = 0; row < h; row++) {
         for (let col = 0; col < w; col++) {
           const idx = (row * w + col) * 4
           if (data[idx] < 50 && data[idx + 1] < 50 && data[idx + 2] < 50) {
@@ -189,6 +192,7 @@ test.describe('Text Edit Issues', () => {
 
   test('Issue 3: Enter key should confirm/exit edit mode', async ({ page }) => {
     await uploadAndWaitForRender(page)
+    await page.waitForTimeout(500)
 
     const pos = await findTextClick(page)
     expect(pos).not.toBeNull()
