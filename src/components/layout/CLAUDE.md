@@ -1,7 +1,7 @@
 # components/layout
 
 ## Purpose
-Top-level layout components that structure the editor UI — dark chrome header, floating toolbar, property panel, and page navigation.
+Top-level layout components that structure the editor UI — dark chrome header, property panel, and page navigation.
 
 ## Files
 
@@ -13,15 +13,6 @@ Dark header bar (48px) with chrome background.
 - Back button calls `useUIStore.setDocumentLoaded(false)` to return to landing page
 - Zoom buttons enforce MIN_ZOOM/MAX_ZOOM bounds
 - All interactive elements use accent-soft hover states on dark background
-
-### Toolbar.tsx
-Floating bottom-center toolbar with dark chrome background.
-- Six tools: select, editText, addText, image, draw, shape
-- Each button is 44x44px with 12px border-radius
-- Active tool uses `var(--gradient-accent)` background with white icon and indigo glow shadow
-- Inactive icons at `var(--chrome-text-muted)`, hover reveals accent-soft bg + accent color
-- Divider (1px x 18px) separates tools from undo/redo
-- Container: rounded-14px, chrome border, backdrop-filter blur, deep box-shadow
 
 ### PropertyPanel.tsx
 Right sidebar (248px) with dark chrome background for editing text properties.

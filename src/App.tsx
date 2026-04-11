@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useUIStore } from './store/uiStore'
 import { LandingPage } from './components/landing/LandingPage'
 import { Header } from './components/layout/Header'
-import { Toolbar } from './components/layout/Toolbar'
 import { EditorCanvas } from './components/editor/EditorCanvas'
 import { PasswordModal } from './components/upload/PasswordModal'
 import { PageNavigator } from './components/layout/PageNavigator'
@@ -246,14 +245,6 @@ function App() {
         <div className="flex-1 relative overflow-hidden">
           <div className="absolute inset-0 animate-fade-in" style={{ animationDelay: '80ms' }}>
             <EditorCanvas editorCore={editorCore} />
-          </div>
-
-          {/* Floating Toolbar */}
-          <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10"
-            style={{ animation: 'fadeSlideInBottom 0.4s ease-out 150ms forwards', opacity: 0 }}
-          >
-            <Toolbar editorCore={editorCore} />
           </div>
 
           {/* Page Navigator */}
