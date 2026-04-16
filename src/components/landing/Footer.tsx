@@ -1,35 +1,76 @@
 export function Footer() {
   return (
-    <footer className="w-full" style={{ padding: '40px 32px' }}>
+    <footer className="w-full" style={{ padding: '60px 32px 32px', position: 'relative' }}>
+      {/* Brick baseline */}
       <div
+        className="pixel-brick"
         style={{
-          height: '1px',
-          background: 'linear-gradient(90deg, transparent, var(--border-solid), transparent)',
+          height: '24px',
           marginBottom: '32px',
+          maxWidth: '1200px',
+          margin: '0 auto 32px',
         }}
       />
-      <div className="flex flex-col md:flex-row justify-between items-center" style={{ gap: '12px' }}>
-        <div className="flex items-center" style={{ gap: '10px' }}>
+
+      <div
+        className="flex flex-col md:flex-row justify-between items-center"
+        style={{ gap: '16px', maxWidth: '1200px', margin: '0 auto' }}
+      >
+        <div className="flex items-center" style={{ gap: '12px' }}>
+          {/* Pixel logo — coin block */}
           <div
-            className="flex items-center justify-center"
             style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '8px',
-              background: 'var(--gradient-accent)',
-              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)',
+              width: '32px',
+              height: '32px',
+              background: 'var(--ink-coin)',
+              border: '3px solid var(--ink-black)',
+              boxShadow:
+                'inset -3px -3px 0 0 var(--ink-coin-dark), inset 3px 3px 0 0 #FFF07A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                color: 'var(--ink-black)',
+                textShadow: '1px 1px 0 rgba(255, 255, 255, 0.4)',
+              }}
+            >
+              P
+            </span>
           </div>
-          <span className="font-semibold" style={{ color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
-            Pdfine
+          <span
+            style={{
+              color: 'var(--ink-black)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '12px',
+              letterSpacing: '0.05em',
+            }}
+          >
+            PDFINE
           </span>
-          <span style={{ color: 'var(--text-ghost)', fontSize: '12px' }}>&copy; {new Date().getFullYear()}</span>
+          <span
+            style={{
+              color: 'var(--ink-brick-dark)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '9px',
+            }}
+          >
+            © {new Date().getFullYear()}
+          </span>
         </div>
-        <p className="text-center md:text-right" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+
+        <p
+          className="text-center md:text-right"
+          style={{
+            color: 'var(--ink-brick-dark)',
+            fontFamily: 'var(--font-pixel-body)',
+            fontSize: '14px',
+          }}
+        >
           Processed locally. No files uploaded. No data collected.
         </p>
       </div>

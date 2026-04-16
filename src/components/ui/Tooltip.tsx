@@ -17,23 +17,29 @@ export function Tooltip({ content, children }: TooltipProps) {
       {children}
       {visible && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap pointer-events-none z-50"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none z-50"
           style={{
-            padding: '5px 10px',
-            fontSize: '11px',
-            fontWeight: 500,
-            borderRadius: '8px',
-            background: 'var(--chrome)',
-            color: 'var(--chrome-text)',
-            boxShadow: 'var(--shadow-lg)',
-            border: '1px solid var(--chrome-border)',
-            fontFamily: 'var(--font-sans)',
+            marginBottom: '10px',
+            padding: '6px 10px',
+            fontSize: '9px',
+            background: 'var(--ink-black)',
+            color: 'var(--ink-coin)',
+            fontFamily: 'var(--font-display)',
+            letterSpacing: '0.05em',
+            border: '2px solid var(--ink-black)',
+            boxShadow: '2px 2px 0 0 var(--ink-brick-dark)',
           }}
         >
-          {content}
+          {content.toUpperCase()}
           <div
-            className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent"
-            style={{ borderTopColor: 'var(--chrome)' }}
+            className="absolute top-full left-1/2 -translate-x-1/2"
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '5px solid var(--ink-black)',
+            }}
           />
         </div>
       )}

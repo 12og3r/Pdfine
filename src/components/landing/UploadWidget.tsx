@@ -1,7 +1,8 @@
-import { FileText, ArrowUpRight, Lock as LockIcon, Shield } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useUIStore } from '../../store/uiStore'
 import type { IEditorCore } from '../../core/interfaces/IEditorCore'
+import { Inky } from '../mascot'
+import { useSfx } from '../../hooks/useSfx'
 
 interface UploadWidgetProps {
   editorCore: IEditorCore
@@ -14,33 +15,40 @@ interface UploadWidgetProps {
 type LoadingPhase = 'parsing' | 'extracting' | 'preparing'
 
 const LOADING_MESSAGES: Record<LoadingPhase, string> = {
-  parsing: 'Parsing document...',
-  extracting: 'Extracting text...',
-  preparing: 'Preparing editor...',
+  parsing: 'PARSING LEVEL...',
+  extracting: 'EXTRACTING GLYPHS...',
+  preparing: 'POWER-UP READY!',
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  type: 'Please choose a PDF file (.pdf). Other file types aren\'t supported yet.',
-  corrupted: 'We couldn\'t open this PDF. The file may be damaged or use an unsupported format.',
-  unknown: 'Something went wrong while opening your PDF. Please try again or use a different file.',
+  type: "That's not a PDF! Drop a .pdf file to continue.",
+  corrupted: "This file is damaged — Inky can't read it.",
+  unknown: 'Something went wrong. Try a different file.',
 }
 
-export function UploadWidget({ editorCore, onDrop, onLoadStart, onLoadComplete, onError }: UploadWidgetProps) {
+export function UploadWidget({
+  editorCore,
+  onDrop,
+  onLoadStart,
+  onLoadComplete,
+  onError,
+}: UploadWidgetProps) {
   const [dragOverZone, setDragOverZone] = useState(false)
   const [loading, setLoading] = useState(false)
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('parsing')
   const [dropped, setDropped] = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [isHovered, setIsHovered] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const loadingTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const setShowPasswordModal = useUIStore((s) => s.setShowPasswordModal)
   const setPendingPdfData = useUIStore((s) => s.setPendingPdfData)
   const setFileName = useUIStore((s) => s.setFileName)
+  const { play } = useSfx()
 
   useEffect(() => {
-    return () => { loadingTimersRef.current.forEach(clearTimeout) }
+    return () => {
+      loadingTimersRef.current.forEach(clearTimeout)
+    }
   }, [])
 
   const startLoadingPhases = useCallback(() => {
@@ -55,20 +63,32 @@ export function UploadWidget({ editorCore, onDrop, onLoadStart, onLoadComplete, 
   const getErrorMessage = useCallback((message: string): string => {
     const lower = message.toLowerCase()
     if (lower.includes('password')) return ''
-    if (lower.includes('invalid') || lower.includes('corrupt') || lower.includes('damaged')) return ERROR_MESSAGES.corrupted
+    if (lower.includes('invalid') || lower.includes('corrupt') || lower.includes('damaged'))
+      return ERROR_MESSAGES.corrupted
     return ERROR_MESSAGES.unknown
   }, [])
 
   const handleFile = useCallback(
     async (file: File) => {
-      if (!file.name.toLowerCase().endsWith('.pdf')) { onError?.(ERROR_MESSAGES.type); return }
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        play('error')
+        onError?.(ERROR_MESSAGES.type)
+        return
+      }
+      play('jump')
       onDrop?.()
       setDropped(true)
-      setTimeout(() => { setDropped(false); setLoading(true); onLoadStart?.(); startLoadingPhases() }, 300)
+      setTimeout(() => {
+        setDropped(false)
+        setLoading(true)
+        onLoadStart?.()
+        startLoadingPhases()
+      }, 300)
       setFileName(file.name)
       try {
         const buffer = await file.arrayBuffer()
         await editorCore.loadPdf(buffer)
+        play('coin')
         onLoadComplete?.()
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
@@ -76,70 +96,98 @@ export function UploadWidget({ editorCore, onDrop, onLoadStart, onLoadComplete, 
           const buffer = await file.arrayBuffer()
           setPendingPdfData(buffer)
           setShowPasswordModal(true)
-        } else { onError?.(getErrorMessage(message)) }
-      } finally { setLoading(false); loadingTimersRef.current.forEach(clearTimeout) }
+        } else {
+          play('error')
+          onError?.(getErrorMessage(message))
+        }
+      } finally {
+        setLoading(false)
+        loadingTimersRef.current.forEach(clearTimeout)
+      }
     },
-    [editorCore, setFileName, setPendingPdfData, setShowPasswordModal, startLoadingPhases, getErrorMessage, onDrop, onLoadStart, onLoadComplete, onError]
+    [
+      editorCore,
+      setFileName,
+      setPendingPdfData,
+      setShowPasswordModal,
+      startLoadingPhases,
+      getErrorMessage,
+      onDrop,
+      onLoadStart,
+      onLoadComplete,
+      onError,
+      play,
+    ]
   )
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current || loading) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2
-    setMousePos({ x, y })
-  }, [loading])
-
   const handleMouseEnter = useCallback(() => setIsHovered(true), [])
-  const handleMouseLeave = useCallback(() => { setMousePos({ x: 0, y: 0 }); setIsHovered(false) }, [])
+  const handleMouseLeave = useCallback(() => setIsHovered(false), [])
 
-  const handleZoneDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOverZone(true) }, [])
-  const handleZoneDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOverZone(false) }, [])
-  const handleZoneDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOverZone(false); const file = e.dataTransfer.files[0]; if (file) handleFile(file) }, [handleFile])
-  const handleClick = useCallback(() => { if (loading) return; fileInputRef.current?.click() }, [loading])
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } }, [handleClick])
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) handleFile(file); e.target.value = '' }, [handleFile])
+  const handleZoneDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverZone(true)
+  }, [])
+  const handleZoneDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverZone(false)
+  }, [])
+  const handleZoneDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setDragOverZone(false)
+      const file = e.dataTransfer.files[0]
+      if (file) handleFile(file)
+    },
+    [handleFile]
+  )
+  const handleClick = useCallback(() => {
+    if (loading) return
+    fileInputRef.current?.click()
+  }, [loading])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        handleClick()
+      }
+    },
+    [handleClick]
+  )
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) handleFile(file)
+      e.target.value = ''
+    },
+    [handleFile]
+  )
 
   const isActive = dragOverZone || dropped
-  const tiltX = mousePos.y * -2.5
-  const tiltY = mousePos.x * 2.5
-  const glowX = (mousePos.x + 1) * 50
-  const glowY = (mousePos.y + 1) * 50
 
   return (
     <>
       <style>{`
-        @keyframes uw-shine-sweep {
-          0% { transform: translateX(-100%) skewX(-15deg); }
-          100% { transform: translateX(250%) skewX(-15deg); }
-        }
-        @keyframes uw-border-breathe {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.8; }
-        }
-        @keyframes uw-glow-pulse {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.02); }
-        }
-        @keyframes uw-dot-drift {
+        @keyframes block-bounce {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
+          30% { transform: translateY(-12px); }
+          60% { transform: translateY(-4px); }
         }
-        @keyframes uw-progress-flow {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+        @keyframes question-wobble {
+          0%, 100% { transform: rotate(0deg) translateY(0); }
+          25% { transform: rotate(-2deg) translateY(-3px); }
+          75% { transform: rotate(2deg) translateY(-3px); }
         }
-        @keyframes uw-phase-in {
-          from { opacity: 0; transform: translateY(6px); filter: blur(4px); }
-          to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        @keyframes phase-swap {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
       <div
-        ref={containerRef}
         className={`group relative w-full cursor-pointer ${dropped ? 'animate-drop-bounce' : ''}`}
-        style={{ perspective: '800px' }}
-        onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onDragOver={handleZoneDragOver}
@@ -151,214 +199,83 @@ export function UploadWidget({ editorCore, onDrop, onLoadStart, onLoadComplete, 
         tabIndex={0}
         aria-label="Upload a PDF file. You can also drag and drop a file here."
       >
-        {/* Gradient border glow — visible on hover & drag */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: '-1px',
-            borderRadius: '21px',
-            background: 'var(--gradient-accent)',
-            opacity: isActive ? 0.9 : isHovered ? 0.45 : 0,
-            transition: 'opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
-            animation: isActive ? 'uw-glow-pulse 2s ease-in-out infinite' : 'none',
-          }}
-        />
-        {/* Soft outer glow for drag state */}
-        {isActive && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: '-6px',
-              borderRadius: '26px',
-              background: 'var(--gradient-accent)',
-              opacity: 0.15,
-              filter: 'blur(16px)',
-              animation: 'uw-glow-pulse 2s ease-in-out infinite',
-            }}
-          />
-        )}
-
-        {/* Main card */}
+        {/* Main card — chunky paper tile */}
         <div
           style={{
             position: 'relative',
-            background: isActive
-              ? 'rgba(255, 255, 255, 0.97)'
-              : 'var(--surface)',
-            borderRadius: '20px',
-            padding: '52px 40px',
-            transform: loading ? 'none' : `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
-            transition: 'transform 0.15s ease-out, background 0.3s ease, box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
-            overflow: 'hidden',
+            background: isActive ? 'var(--ink-paper-dark)' : 'var(--ink-paper)',
+            border: '4px solid var(--ink-black)',
+            padding: '48px 32px 40px',
+            transform: isHovered && !loading ? 'translate(-2px, -2px)' : 'translate(0, 0)',
+            transition: 'transform 0.12s steps(3), background 0.12s steps(3), box-shadow 0.12s steps(3)',
             boxShadow: isActive
-              ? '0 8px 40px rgba(99, 102, 241, 0.12), inset 0 0 60px rgba(99, 102, 241, 0.03)'
+              ? '6px 6px 0 0 var(--ink-black), 0 0 0 3px var(--ink-coin)'
               : isHovered
-                ? '0 12px 40px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(99, 102, 241, 0.08)'
-                : 'var(--shadow-md)',
+                ? '6px 6px 0 0 var(--ink-black)'
+                : '4px 4px 0 0 var(--ink-black)',
           }}
         >
-          {/* Shine sweep — triggers on hover */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              overflow: 'hidden',
-              borderRadius: '20px',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '60%',
-                height: '100%',
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 40%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.5) 60%, transparent)',
-                animation: isHovered && !loading ? 'uw-shine-sweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards' : 'none',
-                opacity: isHovered ? 1 : 0,
-                pointerEvents: 'none',
-              }}
-            />
-          </div>
-
-          {/* Mouse-following radial glow */}
-          {!loading && (
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                background: `radial-gradient(ellipse 320px 260px at ${glowX}% ${glowY}%, rgba(99, 102, 241, 0.07), transparent 70%)`,
-                opacity: mousePos.x === 0 && mousePos.y === 0 ? 0 : 1,
-                transition: 'opacity 0.3s ease',
-              }}
-            />
-          )}
-
-          {/* Subtle corner accents */}
-          {!loading && (
-            <>
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '16px',
-                  left: '16px',
-                  width: '24px',
-                  height: '24px',
-                  borderTop: `2px solid rgba(99, 102, 241, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderLeft: `2px solid rgba(99, 102, 241, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderTopLeftRadius: '6px',
-                  transition: 'border-color 0.4s ease',
-                  pointerEvents: 'none',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '16px',
-                  right: '16px',
-                  width: '24px',
-                  height: '24px',
-                  borderTop: `2px solid rgba(6, 182, 212, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderRight: `2px solid rgba(6, 182, 212, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderTopRightRadius: '6px',
-                  transition: 'border-color 0.4s ease',
-                  pointerEvents: 'none',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  left: '16px',
-                  width: '24px',
-                  height: '24px',
-                  borderBottom: `2px solid rgba(6, 182, 212, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderLeft: `2px solid rgba(6, 182, 212, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderBottomLeftRadius: '6px',
-                  transition: 'border-color 0.4s ease',
-                  pointerEvents: 'none',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  right: '16px',
-                  width: '24px',
-                  height: '24px',
-                  borderBottom: `2px solid rgba(99, 102, 241, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderRight: `2px solid rgba(99, 102, 241, ${isActive ? 0.5 : isHovered ? 0.25 : 0.1})`,
-                  borderBottomRightRadius: '6px',
-                  transition: 'border-color 0.4s ease',
-                  pointerEvents: 'none',
-                }}
-              />
-            </>
-          )}
-
           <div className="flex flex-col items-center text-center relative z-10">
-            {/* Icon */}
+            {/* Big ? Block */}
             <div
-              className={`flex items-center justify-center transition-all duration-500 ${
-                dragOverZone ? 'animate-icon-float' : loading ? 'animate-subtle-pulse' : ''
-              }`}
+              aria-hidden
               style={{
-                width: '76px',
-                height: '76px',
-                borderRadius: '20px',
-                marginBottom: '24px',
-                background: isActive
-                  ? 'var(--gradient-accent)'
+                position: 'relative',
+                width: '96px',
+                height: '96px',
+                background: 'var(--ink-coin)',
+                border: '4px solid var(--ink-black)',
+                boxShadow:
+                  'inset -6px -6px 0 0 var(--ink-coin-dark), inset 6px 6px 0 0 #FFF07A, 4px 4px 0 0 var(--ink-brick-dark)',
+                marginBottom: '28px',
+                animation: isActive
+                  ? 'block-bounce 0.6s steps(6) infinite'
                   : isHovered
-                    ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.08))'
-                    : 'var(--gradient-subtle)',
-                border: isActive
-                  ? 'none'
-                  : `1px solid ${isHovered ? 'rgba(99, 102, 241, 0.15)' : 'var(--border-solid)'}`,
-                boxShadow: isActive
-                  ? '0 6px 24px rgba(99, 102, 241, 0.25), 0 0 0 4px rgba(99, 102, 241, 0.08)'
-                  : isHovered
-                    ? '0 4px 16px rgba(99, 102, 241, 0.08)'
+                    ? 'question-wobble 0.8s steps(6) infinite'
                     : 'none',
-                transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
               }}
             >
-              {loading || dropped ? (
-                <FileText className="w-7 h-7" style={{ color: 'var(--accent)' }} />
-              ) : (
-                <ArrowUpRight
-                  className={`w-7 h-7 transition-all duration-300 ${
-                    dragOverZone ? '' : 'group-hover:translate-x-0.5 group-hover:-translate-y-0.5'
-                  }`}
-                  style={{ color: isActive ? 'white' : 'var(--text-primary)' }}
-                />
-              )}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '48px',
+                  color: 'var(--ink-black)',
+                  lineHeight: 1,
+                  textShadow: '3px 3px 0 var(--ink-paper)',
+                  userSelect: 'none',
+                }}
+              >
+                ?
+              </div>
             </div>
 
             {/* Text */}
             {loading ? (
-              <div style={{ width: '100%', maxWidth: '280px' }}>
+              <div style={{ width: '100%', maxWidth: '320px' }}>
                 <p
                   key={loadingPhase}
-                  className="font-semibold"
                   style={{
-                    color: 'var(--text-primary)',
-                    fontSize: '16px',
-                    marginBottom: '16px',
-                    animation: 'uw-phase-in 400ms ease forwards',
+                    color: 'var(--ink-black)',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '11px',
+                    letterSpacing: '0.08em',
+                    marginBottom: '18px',
+                    animation: 'phase-swap 300ms steps(4) forwards',
                   }}
                 >
                   {LOADING_MESSAGES[loadingPhase]}
                 </p>
-                {/* Progress track */}
                 <div
                   style={{
                     position: 'relative',
-                    height: '3px',
-                    borderRadius: '2px',
-                    background: 'var(--bg-deep)',
+                    height: '14px',
+                    background: 'var(--ink-paper-dark)',
+                    border: '3px solid var(--ink-black)',
                     overflow: 'hidden',
                   }}
                   role="progressbar"
@@ -366,13 +283,10 @@ export function UploadWidget({ editorCore, onDrop, onLoadStart, onLoadComplete, 
                   aria-busy="true"
                 >
                   <div
+                    className="progress-shimmer"
                     style={{
                       height: '100%',
                       width: '100%',
-                      borderRadius: '2px',
-                      background: 'linear-gradient(90deg, #6366F1 0%, #06B6D4 25%, #10B981 50%, #06B6D4 75%, #6366F1 100%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'uw-progress-flow 2s linear infinite',
                     }}
                   />
                 </div>
@@ -380,72 +294,108 @@ export function UploadWidget({ editorCore, onDrop, onLoadStart, onLoadComplete, 
             ) : (
               <>
                 <p
-                  className="font-bold"
                   style={{
-                    color: 'var(--text-primary)',
+                    color: 'var(--ink-black)',
                     fontFamily: 'var(--font-display)',
-                    fontSize: 'clamp(1.125rem, 3vw, 1.5rem)',
-                    letterSpacing: '-0.02em',
-                    fontWeight: 700,
+                    fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
+                    letterSpacing: '0.05em',
+                    lineHeight: 1.3,
                   }}
                 >
-                  {dragOverZone ? 'Release to open' : 'Drop your PDF here'}
+                  {dragOverZone ? 'RELEASE TO PLAY!' : 'DROP YOUR PDF'}
                 </p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '10px' }}>
+                <p
+                  style={{
+                    color: 'var(--ink-brick-dark)',
+                    fontFamily: 'var(--font-pixel-body)',
+                    fontSize: '18px',
+                    marginTop: '14px',
+                  }}
+                >
                   or{' '}
                   <span
-                    className="transition-colors duration-200"
                     style={{
-                      color: 'var(--accent)',
+                      color: 'var(--ink-brick)',
                       textDecoration: 'underline',
-                      textDecorationStyle: 'dotted',
+                      textDecorationStyle: 'solid',
                       textUnderlineOffset: '4px',
-                      textDecorationColor: 'rgba(99, 102, 241, 0.4)',
                     }}
                   >
-                    click to browse
+                    press START to browse
                   </span>
                 </p>
               </>
             )}
 
-            {/* Footer info */}
+            {/* Footer pixel badges */}
             {!loading && (
               <div
                 className="w-full flex items-center justify-center"
                 style={{
                   marginTop: '32px',
-                  paddingTop: '20px',
-                  borderTop: '1px solid var(--border-solid)',
-                  gap: '24px',
+                  paddingTop: '22px',
+                  borderTop: '3px dashed var(--ink-black)',
+                  gap: '16px',
+                  flexWrap: 'wrap',
                 }}
               >
-                <div className="flex items-center" style={{ gap: '6px' }}>
-                  <LockIcon className="w-3 h-3" style={{ color: 'var(--text-ghost)' }} />
-                  <span
-                    className="font-medium uppercase"
-                    style={{ color: 'var(--text-muted)', fontSize: '11px', letterSpacing: '0.06em' }}
-                  >
-                    Private
-                  </span>
-                </div>
-                <div style={{ width: '1px', height: '12px', background: 'var(--border-solid)' }} />
-                <div className="flex items-center" style={{ gap: '6px' }}>
-                  <Shield className="w-3 h-3" style={{ color: 'var(--text-ghost)' }} />
-                  <span
-                    className="font-medium uppercase"
-                    style={{ color: 'var(--text-muted)', fontSize: '11px', letterSpacing: '0.06em' }}
-                  >
-                    Local only
-                  </span>
-                </div>
-                <div style={{ width: '1px', height: '12px', background: 'var(--border-solid)' }} />
-                <span className="font-medium" style={{ color: 'var(--text-ghost)', fontSize: '11px' }}>
-                  .pdf up to 100MB
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '8px',
+                    color: 'var(--ink-black)',
+                    letterSpacing: '0.08em',
+                    background: 'var(--ink-grass)',
+                    border: '2px solid var(--ink-black)',
+                    padding: '5px 9px',
+                  }}
+                >
+                  PRIVATE
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '8px',
+                    color: 'var(--ink-black)',
+                    letterSpacing: '0.08em',
+                    background: 'var(--ink-sky)',
+                    border: '2px solid var(--ink-black)',
+                    padding: '5px 9px',
+                  }}
+                >
+                  LOCAL ONLY
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '8px',
+                    color: 'var(--ink-paper)',
+                    letterSpacing: '0.08em',
+                    background: 'var(--ink-brick)',
+                    border: '2px solid var(--ink-black)',
+                    padding: '5px 9px',
+                  }}
+                >
+                  .PDF ≤ 100MB
                 </span>
               </div>
             )}
           </div>
+
+          {/* Loading Inky walking */}
+          {loading && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '8px',
+                left: '12px',
+                transform: 'translateY(6px)',
+                animation: 'inkyWalk 0.3s steps(2) infinite',
+              }}
+            >
+              <Inky action="walk" size={2} />
+            </div>
+          )}
         </div>
       </div>
 

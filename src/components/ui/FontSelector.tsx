@@ -27,35 +27,109 @@ export function FontSelector({ value, onChange, editorCore }: FontSelectorProps)
   }, [open])
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
-        className="w-full flex items-center justify-between px-3 py-1.5 text-sm border border-[var(--color-gray-200)] rounded-lg hover:border-[var(--color-gray-300)] bg-white cursor-pointer"
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 10px',
+          fontFamily: 'var(--font-display)',
+          fontSize: '10px',
+          color: 'var(--ink-black)',
+          background: 'var(--ink-cloud)',
+          border: '3px solid var(--ink-black)',
+          boxShadow: '2px 2px 0 0 var(--ink-black)',
+          cursor: 'pointer',
+          letterSpacing: '0.03em',
+        }}
         onClick={() => setOpen(!open)}
       >
-        <span className="truncate">{selectedFont?.name ?? 'Select font'}</span>
-        <ChevronDown className="w-4 h-4 text-[var(--color-gray-400)] shrink-0 ml-1" />
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {(selectedFont?.name ?? 'SELECT FONT').toUpperCase()}
+        </span>
+        <ChevronDown
+          className="w-4 h-4 shrink-0 ml-1"
+          style={{ color: 'var(--ink-brick-dark)' }}
+        />
       </button>
       {open && (
-        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-[var(--color-gray-200)] rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {fonts.map((font) => (
-            <button
-              key={font.id}
-              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--color-gray-50)] cursor-pointer ${
-                font.id === value ? 'bg-[var(--color-primary-50)] text-[var(--color-primary)]' : 'text-[var(--color-gray-700)]'
-              }`}
-              onClick={() => {
-                onChange(font.id)
-                setOpen(false)
+        <div
+          style={{
+            position: 'absolute',
+            zIndex: 20,
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            background: 'var(--ink-paper)',
+            border: '3px solid var(--ink-black)',
+            boxShadow: '4px 4px 0 0 var(--ink-black)',
+            maxHeight: '220px',
+            overflowY: 'auto',
+          }}
+          className="custom-scrollbar"
+        >
+          {fonts.map((font) => {
+            const selected = font.id === value
+            return (
+              <button
+                key={font.id}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '8px 10px',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  color: selected ? 'var(--ink-black)' : 'var(--ink-brick-dark)',
+                  background: selected ? 'var(--ink-coin)' : 'transparent',
+                  border: 'none',
+                  borderBottom: '2px solid var(--ink-black)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (!selected) e.currentTarget.style.background = 'var(--ink-paper-dark)'
+                }}
+                onMouseLeave={(e) => {
+                  if (!selected) e.currentTarget.style.background = 'transparent'
+                }}
+                onClick={() => {
+                  onChange(font.id)
+                  setOpen(false)
+                }}
+              >
+                {font.name.toUpperCase()}
+                {!font.editable && (
+                  <span
+                    style={{
+                      marginLeft: '6px',
+                      fontSize: '8px',
+                      color: 'var(--ink-brick)',
+                    }}
+                  >
+                    (R/O)
+                  </span>
+                )}
+              </button>
+            )
+          })}
+          {fonts.length === 0 && (
+            <div
+              style={{
+                padding: '10px',
+                fontFamily: 'var(--font-display)',
+                fontSize: '9px',
+                color: 'var(--ink-brick-dark)',
               }}
             >
-              {font.name}
-              {!font.editable && (
-                <span className="ml-1 text-xs text-[var(--color-gray-400)]">(read-only)</span>
-              )}
-            </button>
-          ))}
-          {fonts.length === 0 && (
-            <div className="px-3 py-2 text-sm text-[var(--color-gray-400)]">No fonts available</div>
+              NO FONTS AVAILABLE
+            </div>
           )}
         </div>
       )}

@@ -36,51 +36,50 @@ export function LandingPage({ editorCore }: LandingPageProps) {
       {/* ===== Navigation ===== */}
       <nav
         className="relative z-20 w-full flex justify-between items-center"
-        style={{ padding: '24px 32px' }}
+        style={{ padding: '20px 32px' }}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center" style={{ gap: '12px' }}>
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            className="flex items-center justify-center"
             style={{
-              background: 'var(--gradient-accent)',
-              boxShadow: '0 2px 10px rgba(99, 102, 241, 0.2)',
+              width: '36px',
+              height: '36px',
+              background: 'var(--ink-coin)',
+              border: '3px solid var(--ink-black)',
+              boxShadow:
+                'inset -3px -3px 0 0 var(--ink-coin-dark), inset 3px 3px 0 0 #FFF07A, 2px 2px 0 0 var(--ink-black)',
             }}
           >
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                color: 'var(--ink-black)',
+                textShadow: '1px 1px 0 rgba(255, 255, 255, 0.4)',
+              }}
+            >
+              P
+            </span>
           </div>
           <span
-            className="text-[15px] font-bold tracking-[-0.02em]"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}
+            style={{
+              color: 'var(--ink-black)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '14px',
+              letterSpacing: '0.05em',
+            }}
           >
-            Pdfine
+            PDFINE
           </span>
         </div>
         <a
           href="https://github.com"
           target="_blank"
           rel="noreferrer"
-          className="text-[13px] font-medium tracking-wide uppercase transition-all duration-200"
-          style={{
-            color: 'var(--text-muted)',
-            letterSpacing: '0.08em',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '1px solid transparent',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--accent)'
-            e.currentTarget.style.borderColor = 'var(--border-accent)'
-            e.currentTarget.style.background = 'var(--accent-soft)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--text-muted)'
-            e.currentTarget.style.borderColor = 'transparent'
-            e.currentTarget.style.background = 'transparent'
-          }}
+          className="pixel-btn pixel-btn-ghost"
+          style={{ fontSize: '9px', padding: '10px 14px' }}
         >
-          GitHub
+          GITHUB
         </a>
       </nav>
 
@@ -103,18 +102,24 @@ export function LandingPage({ editorCore }: LandingPageProps) {
           />
 
           {error && (
-            <div className={`w-full text-center ${shakeError ? 'animate-shake' : ''}`} style={{ marginTop: '20px' }} role="alert">
+            <div
+              className={`w-full text-center ${shakeError ? 'animate-shake' : ''}`}
+              style={{ marginTop: '24px' }}
+              role="alert"
+            >
               <div
-                className="inline-block text-sm font-medium"
+                className="inline-block"
                 style={{
-                  background: 'var(--error-soft)',
-                  color: 'var(--error)',
-                  border: '1px solid rgba(239, 68, 68, 0.15)',
-                  borderRadius: '10px',
-                  padding: '10px 20px',
+                  background: 'var(--ink-danger)',
+                  color: 'var(--ink-paper)',
+                  border: '3px solid var(--ink-black)',
+                  boxShadow: '3px 3px 0 0 var(--ink-black)',
+                  padding: '12px 20px',
+                  fontFamily: 'var(--font-pixel-body)',
+                  fontSize: '15px',
                 }}
               >
-                {error}
+                ⚠ {error}
               </div>
             </div>
           )}

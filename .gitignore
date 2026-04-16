@@ -26,3 +26,9 @@ dist-ssr
 # E2E screenshots and test results
 e2e/screenshots/
 test-results/
+
+# Claude Code worktrees (large, per-session, not source)
+.claude/worktrees/
+
+# Scratch export artifacts from repro tests
+public/__repro_exported.pdf

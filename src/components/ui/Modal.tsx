@@ -26,25 +26,44 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     <div
       ref={backdropRef}
       className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-      style={{ background: 'rgba(0, 0, 0, 0.2)', backdropFilter: 'blur(6px)' }}
+      style={{
+        background: 'rgba(43, 43, 84, 0.55)',
+      }}
       onMouseDown={(e) => {
         if (e.target === backdropRef.current) onClose()
       }}
     >
       <div
-        className="w-full max-w-md mx-4 p-6 rounded-2xl animate-scale-up"
+        className="w-full max-w-md mx-4 animate-scale-up"
         style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border-solid)',
-          boxShadow: 'var(--shadow-xl)',
+          background: 'var(--ink-paper)',
+          border: '4px solid var(--ink-black)',
+          boxShadow: '8px 8px 0 0 var(--ink-black)',
+          padding: '24px 26px',
         }}
       >
-        <h2
-          className="text-lg font-bold mb-4 tracking-[-0.02em]"
-          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}
+        {/* Title bar — coin banner */}
+        <div
+          style={{
+            background: 'var(--ink-coin)',
+            border: '3px solid var(--ink-black)',
+            boxShadow: 'inset -3px -3px 0 0 var(--ink-coin-dark), inset 3px 3px 0 0 #FFF07A',
+            padding: '10px 14px',
+            marginBottom: '20px',
+          }}
         >
-          {title}
-        </h2>
+          <h2
+            style={{
+              color: 'var(--ink-black)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '12px',
+              letterSpacing: '0.05em',
+              textShadow: '1px 1px 0 rgba(255, 255, 255, 0.35)',
+            }}
+          >
+            {title.toUpperCase()}
+          </h2>
+        </div>
         {children}
       </div>
     </div>

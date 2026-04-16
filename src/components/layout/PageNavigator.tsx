@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useUIStore } from '../../store/uiStore'
 import type { IEditorCore } from '../../core/interfaces/IEditorCore'
+import { useSfx } from '../../hooks/useSfx'
 
 interface PageNavigatorProps {
   editorCore: IEditorCore
@@ -9,6 +10,7 @@ interface PageNavigatorProps {
 export function PageNavigator({ editorCore }: PageNavigatorProps) {
   const currentPage = useUIStore((s) => s.currentPage)
   const totalPages = useUIStore((s) => s.totalPages)
+  const { play } = useSfx()
 
   if (totalPages <= 1) return null
 
@@ -17,6 +19,7 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       const next = currentPage - 1
       useUIStore.getState().setCurrentPage(next)
       editorCore.setCurrentPage(next)
+      play('click')
     }
   }
 
@@ -25,24 +28,39 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       const next = currentPage + 1
       useUIStore.getState().setCurrentPage(next)
       editorCore.setCurrentPage(next)
+      play('click')
     }
   }
 
+  const navBtnStyle = (disabled: boolean): React.CSSProperties => ({
+    width: '36px',
+    height: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: disabled ? 'var(--ink-brick-deep)' : 'var(--ink-brick-dark)',
+    color: disabled ? 'var(--text-ghost)' : 'var(--ink-coin)',
+    border: 'none',
+    cursor: disabled ? 'default' : 'pointer',
+    opacity: disabled ? 0.4 : 1,
+  })
+
   return (
     <div
-      className="flex items-center rounded-xl"
       style={{
-        background: 'var(--chrome)',
-        padding: '5px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.24), 0 2px 8px rgba(0,0,0,0.12)',
-        border: '1px solid var(--chrome-border)',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'var(--ink-brick-deep)',
+        border: '3px solid var(--ink-black)',
+        boxShadow: '4px 4px 0 0 var(--ink-black)',
       }}
     >
       <button
-        className="p-2 rounded-lg disabled:opacity-20 cursor-pointer disabled:cursor-default transition-colors"
-        style={{ color: 'var(--chrome-text-muted)' }}
-        onMouseEnter={(e) => { if (currentPage > 0) { e.currentTarget.style.background = 'var(--chrome-hover)'; e.currentTarget.style.color = 'var(--chrome-text)' } }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--chrome-text-muted)' }}
+        aria-label="Previous page"
+        style={{
+          ...navBtnStyle(currentPage === 0),
+          borderRight: '2px solid var(--ink-black)',
+        }}
         onClick={handlePrev}
         disabled={currentPage === 0}
       >
@@ -51,21 +69,22 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       <span
         className="tabular-nums select-none"
         style={{
-          color: 'rgba(255,255,255,0.6)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '12px',
-          padding: '0 10px',
-          minWidth: '3.5rem',
+          color: 'var(--ink-coin)',
+          fontFamily: 'var(--font-display)',
+          fontSize: '10px',
+          padding: '0 12px',
+          minWidth: '4rem',
           textAlign: 'center',
         }}
       >
         {currentPage + 1} / {totalPages}
       </span>
       <button
-        className="p-2 rounded-lg disabled:opacity-20 cursor-pointer disabled:cursor-default transition-colors"
-        style={{ color: 'var(--chrome-text-muted)' }}
-        onMouseEnter={(e) => { if (currentPage < totalPages - 1) { e.currentTarget.style.background = 'var(--chrome-hover)'; e.currentTarget.style.color = 'var(--chrome-text)' } }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--chrome-text-muted)' }}
+        aria-label="Next page"
+        style={{
+          ...navBtnStyle(currentPage >= totalPages - 1),
+          borderLeft: '2px solid var(--ink-black)',
+        }}
         onClick={handleNext}
         disabled={currentPage >= totalPages - 1}
       >

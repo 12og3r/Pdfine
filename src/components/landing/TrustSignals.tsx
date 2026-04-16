@@ -1,31 +1,59 @@
-import { ShieldCheck, ServerOff, Sparkles } from 'lucide-react'
+import type { CSSProperties } from 'react'
+
+interface Signal {
+  text: string
+  coinCount: number
+  bg: string
+}
+
+const SIGNALS: Signal[] = [
+  { text: 'PRIVATE', coinCount: 3, bg: 'var(--ink-grass)' },
+  { text: 'NO UPLOADS', coinCount: 3, bg: 'var(--ink-sky)' },
+  { text: 'OPEN SOURCE', coinCount: 3, bg: 'var(--ink-coin)' },
+]
 
 export function TrustSignals() {
   return (
-    <div className="flex flex-wrap items-center justify-center" style={{ gap: '24px' }}>
-      {[
-        { icon: ShieldCheck, text: 'Private', color: '#6366F1' },
-        { icon: ServerOff, text: 'No uploads', color: '#06B6D4' },
-        { icon: Sparkles, text: 'Open source', color: '#10B981' },
-      ].map((item, i) => (
+    <div
+      className="flex flex-wrap items-center justify-center"
+      style={{ gap: '20px' }}
+    >
+      {SIGNALS.map((item, i) => (
         <div
           key={item.text}
-          className="flex items-center animate-entrance cursor-default"
-          style={{
-            gap: '8px',
-            '--slide-y': '4px',
-            animationDelay: `${700 + i * 100}ms`,
-            padding: '6px 14px',
-            borderRadius: '100px',
-            background: 'var(--surface)',
-            border: '1px solid var(--border-solid)',
-            boxShadow: 'var(--shadow-xs)',
-          } as React.CSSProperties}
+          className="animate-entrance cursor-default"
+          style={
+            {
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '8px 14px',
+              background: item.bg,
+              border: '3px solid var(--ink-black)',
+              boxShadow: '3px 3px 0 0 var(--ink-black)',
+              '--slide-y': '6px',
+              animationDelay: `${700 + i * 120}ms`,
+            } as CSSProperties
+          }
         >
-          <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+          {Array.from({ length: item.coinCount }).map((_, j) => (
+            <span
+              key={j}
+              className="pixel-coin"
+              style={{
+                width: '12px',
+                height: '12px',
+                animationDelay: `${j * 200}ms`,
+              }}
+            />
+          ))}
           <span
-            className="font-medium"
-            style={{ color: 'var(--text-secondary)', fontSize: '12px', letterSpacing: '0.03em' }}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '9px',
+              color: 'var(--ink-black)',
+              letterSpacing: '0.08em',
+            }}
           >
             {item.text}
           </span>

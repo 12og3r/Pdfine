@@ -1,53 +1,61 @@
 # components/ui
 
 ## Purpose
-Reusable, styled UI primitives used across the application. CSS variables + inline styles for all styling.
+Reusable, styled UI primitives used across the application. CSS variables + inline styles for all styling. All primitives follow the **Inkworld** pixel theme — hard ink-black borders, stepped offset shadows, no rounded corners, Press Start 2P for labels.
 
 ## Files
 
 ### Button.tsx
-Multi-variant button component extending `ButtonHTMLAttributes`.
-- Variants: `primary` (`var(--text-primary)` bg, white text), `secondary` (white bg, border-solid), `ghost`, `danger`
-- Sizes: `sm`, `md` (default), `lg`
-- All buttons use rounded-lg border radius and font-semibold
-- Disabled state: opacity-40, pointer-events-none
-- Active: scale-[0.98] press effect
+Multi-variant pixel button extending `ButtonHTMLAttributes`.
+- Variants:
+  - `primary` — coin-yellow background, ink-black border + shadow
+  - `secondary` (default) — cream paper background, ink-black border + shadow
+  - `ghost` — transparent background, ink-black border only
+  - `danger` — red background, cream text, ink-black border + shadow
+- Sizes: `sm` (28px), `md` (34px, default), `lg` (42px)
+- Typography: Press Start 2P, uppercase, 0.05em letter spacing
+- Press feedback: `translate(2px, 2px)` + smaller offset shadow on mousedown, restored on mouseup/leave
+- No rounded corners
 
 ### Modal.tsx
-Overlay modal dialog with blurred backdrop.
+Overlay modal with ink-toned backdrop.
 - Props: `open`, `onClose`, `title`, `children`
 - Escape key and backdrop click dismiss
-- White card with `var(--border-solid)` border, rounded-2xl
-- Entry animation: `animate-scale-up` for card, `animate-fade-in` for backdrop
-- Backdrop uses `rgba(0,0,0,0.2)` with `backdrop-filter: blur(6px)`
-- Title uses `var(--font-display)` (Outfit)
+- Card: cream paper background, 4px ink-black border, 8px hard offset shadow
+- Title bar: coin-yellow banner with inset light/dark shadows (pressed SNES block style), Press Start 2P title uppercase
+- Backdrop: translucent ink black (`rgba(43, 43, 84, 0.55)`)
+- Entry: `animate-scale-up` + `animate-fade-in` (stepped)
 
 ### Tooltip.tsx
-Hover-activated tooltip positioned above trigger element.
-- Dark chrome background with white text, chrome-colored downward arrow
-- Inline style padding (5px 10px) to avoid Tailwind v4 reset issues
-- 11px font size, 8px border-radius, chrome border
-- Shadow-lg, z-50 stacking, pointer-events-none
+Hover-activated pixel tooltip positioned above trigger element.
+- Ink-black background with coin-yellow text (Press Start 2P, 9px, uppercase)
+- 2px ink border + 2px brick-dark offset shadow
+- CSS-triangle arrow pointing down at the trigger
 
 ### ColorPicker.tsx
-Color selection with 9 preset colors and custom hex input.
+Color selection with 9 Inkworld-palette presets + custom hex input.
 - Color type: `{ r, g, b }` (0-255), NOT hex strings
+- Preset colors (Ink, Brick Dark, Red, Brick, Coin, Grass, Pipe, Sky, Deep Sky)
 - Helpers: `colorToHex()`, `hexToColor()`, `colorsEqual()`
-- Native HTML color picker + text input with hex validation
+- Each swatch: 3px ink-black border, 2px offset shadow; selected swatch has inner coin-yellow ring + lifted position
+- Native HTML color picker + pixel text input for hex values
 - Controlled component (value/onChange)
 
 ### FontSelector.tsx
 Dropdown for selecting available fonts from EditorCore.
-- Fetches fonts via `editorCore.getFontManager().getAvailableFonts()`
-- Shows "(read-only)" label for non-editable fonts
+- Trigger button: Press Start 2P, cream background, 3px ink border, 2px offset shadow
+- Dropdown: cream paper panel with 3px ink border + 4px offset shadow, each row separated by 2px ink divider
+- Selected row: coin-yellow background
+- Non-editable fonts show "(R/O)" suffix
 - Click-outside detection for dismissal
-- z-20 stacking
 
 ## Patterns
 - Explicit `*Props` interface per component
 - Controlled components with `value`/`onChange` (ColorPicker, FontSelector)
-- CSS variables for all colors, no raw Tailwind color classes
+- CSS variables for all colors; use Inkworld tokens (see root CLAUDE.md)
 - Inline `style={{}}` for padding/spacing to avoid Tailwind v4 reset conflicts
+- No rounded corners, no soft shadows
+- Press Start 2P for labels and button text; always uppercase with letter spacing
 - Parameter defaults for optional props
 
 ## Dependencies

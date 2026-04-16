@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode, CSSProperties } from 'react'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -6,17 +6,37 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-const variantStyles: Record<string, React.CSSProperties> = {
-  primary: { background: 'var(--text-primary)', color: 'white' },
-  secondary: { background: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border-solid)' },
-  ghost: { background: 'transparent', color: 'var(--text-secondary)' },
-  danger: { background: 'var(--error)', color: 'white' },
+const variantStyles: Record<string, CSSProperties> = {
+  primary: {
+    background: 'var(--ink-coin)',
+    color: 'var(--ink-black)',
+    border: '3px solid var(--ink-black)',
+    boxShadow: '3px 3px 0 0 var(--ink-black)',
+  },
+  secondary: {
+    background: 'var(--ink-paper)',
+    color: 'var(--ink-black)',
+    border: '3px solid var(--ink-black)',
+    boxShadow: '3px 3px 0 0 var(--ink-black)',
+  },
+  ghost: {
+    background: 'transparent',
+    color: 'var(--ink-black)',
+    border: '3px solid var(--ink-black)',
+    boxShadow: 'none',
+  },
+  danger: {
+    background: 'var(--ink-danger)',
+    color: 'var(--ink-paper)',
+    border: '3px solid var(--ink-black)',
+    boxShadow: '3px 3px 0 0 var(--ink-black)',
+  },
 }
 
-const sizeClasses = {
-  sm: 'h-7 px-3 text-[12px]',
-  md: 'h-8 px-4 text-[13px]',
-  lg: 'h-10 px-5 text-[14px]',
+const sizeStyles: Record<string, CSSProperties> = {
+  sm: { height: '28px', padding: '0 12px', fontSize: '9px' },
+  md: { height: '34px', padding: '0 16px', fontSize: '10px' },
+  lg: { height: '42px', padding: '0 22px', fontSize: '11px' },
 }
 
 export function Button({
@@ -29,8 +49,30 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none cursor-pointer hover:opacity-85 active:scale-[0.98] ${sizeClasses[size]} ${className}`}
-      style={{ ...variantStyles[variant], ...style }}
+      className={`inline-flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${className}`}
+      style={{
+        fontFamily: 'var(--font-display)',
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+        transition: 'transform 100ms steps(2), box-shadow 100ms steps(2)',
+        ...variantStyles[variant],
+        ...sizeStyles[size],
+        ...style,
+      }}
+      onMouseDown={(e) => {
+        e.currentTarget.style.transform = 'translate(2px, 2px)'
+        e.currentTarget.style.boxShadow = '1px 1px 0 0 var(--ink-black)'
+      }}
+      onMouseUp={(e) => {
+        e.currentTarget.style.transform = 'translate(0, 0)'
+        e.currentTarget.style.boxShadow =
+          (variantStyles[variant] as CSSProperties).boxShadow as string
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translate(0, 0)'
+        e.currentTarget.style.boxShadow =
+          (variantStyles[variant] as CSSProperties).boxShadow as string
+      }}
       {...props}
     >
       {children}

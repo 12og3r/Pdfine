@@ -7,7 +7,7 @@ Core React UI components for the visual PDF editor — canvas rendering, user in
 
 ### EditorCanvas.tsx
 Main container managing the canvas element and viewport. Handles all mouse/wheel interactions and delegates to EditorCore.
-- Uses `editor-canvas-bg` CSS class: warm gray background (#E8E7E2) with dot-grid pattern (20px spacing, `rgba(0,0,0,0.07)` dots)
+- Uses `editor-canvas-bg` CSS class: muted sky-green background (#E6F4E4) with a very faint 16×16 pixel grid (6% opacity). The grid decorates but never competes with PDF content — the rendered PDF itself is untouched by the Inkworld theme.
 - Manages HTMLCanvasElement with devicePixelRatio scaling (critical for HiDPI)
 - ResizeObserver updates viewport on container resize
 - Zoom via Ctrl/Cmd+Wheel, clamped to MIN_ZOOM/MAX_ZOOM

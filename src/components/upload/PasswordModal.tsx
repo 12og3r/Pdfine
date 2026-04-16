@@ -35,9 +35,10 @@ export function PasswordModal({ editorCore }: PasswordModalProps) {
       handleClose()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      setError(message.toLowerCase().includes('password')
-        ? 'Incorrect password. Please try again.'
-        : message
+      setError(
+        message.toLowerCase().includes('password')
+          ? 'Incorrect password. Please try again.'
+          : message
       )
     } finally {
       setLoading(false)
@@ -51,17 +52,39 @@ export function PasswordModal({ editorCore }: PasswordModalProps) {
   return (
     <Modal open title="Password Required" onClose={handleClose}>
       <div
-        className="flex items-center gap-3 mb-5 p-3.5 rounded-lg"
-        style={{ background: 'var(--accent-light)', border: '1px solid var(--border)' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '18px',
+          padding: '12px 14px',
+          background: 'var(--ink-paper-dark)',
+          border: '3px solid var(--ink-black)',
+        }}
       >
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'var(--accent-soft)' }}
+          style={{
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--ink-brick)',
+            border: '3px solid var(--ink-black)',
+            flexShrink: 0,
+          }}
         >
-          <Lock className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+          <Lock className="w-4 h-4" style={{ color: 'var(--ink-paper)' }} />
         </div>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          This PDF is encrypted. Enter the password to continue.
+        <p
+          style={{
+            color: 'var(--ink-black)',
+            fontFamily: 'var(--font-pixel-body)',
+            fontSize: '14px',
+            lineHeight: 1.4,
+          }}
+        >
+          This PDF is locked. Enter the password to continue.
         </p>
       </div>
 
@@ -70,18 +93,39 @@ export function PasswordModal({ editorCore }: PasswordModalProps) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Enter password"
-        className="w-full px-4 py-2.5 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-opacity-30 transition-shadow"
-        style={{ border: '1px solid var(--border-solid)', background: 'var(--bg-warm)' }}
+        placeholder="ENTER PASSWORD"
+        className="w-full focus:outline-none"
+        style={{
+          padding: '12px 14px',
+          fontFamily: 'var(--font-display)',
+          fontSize: '11px',
+          letterSpacing: '0.05em',
+          color: 'var(--ink-black)',
+          background: 'var(--ink-cloud)',
+          border: '3px solid var(--ink-black)',
+          boxShadow: '3px 3px 0 0 var(--ink-black)',
+        }}
         autoFocus
       />
 
       {error && (
-        <p className="mt-2.5 text-sm font-medium" style={{ color: 'var(--error)' }}>{error}</p>
+        <p
+          style={{
+            marginTop: '12px',
+            fontFamily: 'var(--font-pixel-body)',
+            fontSize: '13px',
+            color: 'var(--ink-danger)',
+            fontWeight: 700,
+          }}
+        >
+          ⚠ {error}
+        </p>
       )}
 
-      <div className="flex justify-end gap-2 mt-6">
-        <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+        <Button variant="secondary" onClick={handleClose}>
+          Cancel
+        </Button>
         <Button variant="primary" onClick={handleUnlock} disabled={loading || !password}>
           {loading ? 'Unlocking...' : 'Unlock'}
         </Button>

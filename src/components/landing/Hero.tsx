@@ -1,141 +1,156 @@
-import { useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
+import { Inky } from '../mascot'
 
 export function Hero() {
-  const orbRef1 = useRef<HTMLDivElement>(null)
-  const orbRef2 = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    let animId: number
-    let t = 0
-    const animate = () => {
-      t += 0.003
-      if (orbRef1.current) {
-        const x = Math.sin(t * 0.7) * 40
-        const y = Math.cos(t * 0.5) * 30
-        orbRef1.current.style.transform = `translate(${x}px, ${y}px) scale(${1 + Math.sin(t) * 0.05})`
-      }
-      if (orbRef2.current) {
-        const x = Math.cos(t * 0.6) * 35
-        const y = Math.sin(t * 0.8) * 25
-        orbRef2.current.style.transform = `translate(${x}px, ${y}px) scale(${1 + Math.cos(t * 1.2) * 0.04})`
-      }
-      animId = requestAnimationFrame(animate)
-    }
-    animate()
-    return () => cancelAnimationFrame(animId)
-  }, [])
-
   return (
-    <div className="flex flex-col items-center text-center relative" style={{ maxWidth: '820px', margin: '0 auto' }}>
-      {/* Floating gradient orbs */}
+    <div
+      className="relative"
+      style={{
+        maxWidth: '1080px',
+        margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        gap: '48px',
+        alignItems: 'center',
+        padding: '0 16px',
+      }}
+    >
+      {/* Decorative pixel clouds */}
+      <div className="pixel-cloud" style={{ top: '-40px', left: '8%', animation: 'float 6s steps(6) infinite' }} />
       <div
-        ref={orbRef1}
+        className="pixel-cloud"
         style={{
-          position: 'absolute',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)',
-          top: '-120px',
-          left: '-180px',
-          pointerEvents: 'none',
-          filter: 'blur(60px)',
-          willChange: 'transform',
+          top: '60px',
+          right: '4%',
+          width: '72px',
+          height: '32px',
+          animation: 'float 8s steps(6) infinite',
+          animationDelay: '-3s',
         }}
       />
       <div
-        ref={orbRef2}
+        className="pixel-cloud"
         style={{
-          position: 'absolute',
-          width: '400px',
-          height: '400px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 70%)',
-          top: '-60px',
-          right: '-140px',
-          pointerEvents: 'none',
-          filter: 'blur(60px)',
-          willChange: 'transform',
+          top: '180px',
+          left: '32%',
+          width: '56px',
+          height: '24px',
+          animation: 'float 7s steps(6) infinite',
+          animationDelay: '-1.5s',
         }}
       />
 
-      {/* Badge */}
-      <div
-        className="animate-entrance"
-        style={{
-          animationDelay: '100ms',
-          '--slide-y': '12px',
-          marginBottom: '28px',
-        } as React.CSSProperties}
-      >
+      {/* Left column: text */}
+      <div className="flex flex-col items-start text-left relative" style={{ zIndex: 2 }}>
+        {/* Coin Badge */}
         <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 16px',
-            borderRadius: '100px',
-            background: 'var(--accent-soft)',
-            border: '1px solid rgba(99, 102, 241, 0.12)',
-            fontSize: '13px',
-            fontWeight: 600,
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-sans)',
-            letterSpacing: '0.01em',
-          }}
+          className="animate-entrance"
+          style={
+            {
+              animationDelay: '100ms',
+              '--slide-y': '12px',
+              marginBottom: '28px',
+            } as CSSProperties
+          }
         >
-          <span style={{
-            width: '6px',
-            height: '6px',
-            borderRadius: '50%',
-            background: 'var(--accent)',
-            boxShadow: '0 0 8px var(--accent-glow)',
-            animation: 'subtlePulse 2s ease-in-out infinite',
-          }} />
-          100% Client-Side
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '8px 14px',
+              background: 'var(--ink-paper)',
+              border: '3px solid var(--ink-black)',
+              boxShadow: '3px 3px 0 0 var(--ink-black)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '9px',
+              color: 'var(--ink-black)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <span className="pixel-coin" style={{ width: '14px', height: '14px' }} />
+            100% CLIENT-SIDE
+          </div>
         </div>
+
+        {/* Display Headline — chunky pixel drop-shadow title */}
+        <h1
+          className="animate-entrance"
+          style={
+            {
+              fontFamily: 'var(--font-display)',
+              color: 'var(--ink-coin)',
+              fontSize: 'clamp(2rem, 6vw, 4rem)',
+              lineHeight: 1.15,
+              letterSpacing: '0.02em',
+              fontWeight: 400,
+              marginBottom: '28px',
+              animationDelay: '200ms',
+              '--slide-y': '30px',
+              textShadow:
+                '3px 0 0 var(--ink-black), -3px 0 0 var(--ink-black), 0 3px 0 var(--ink-black), 0 -3px 0 var(--ink-black), 3px 3px 0 var(--ink-black), -3px 3px 0 var(--ink-black), 3px -3px 0 var(--ink-black), -3px -3px 0 var(--ink-black), 6px 6px 0 var(--ink-brick-dark)',
+            } as CSSProperties
+          }
+        >
+          EDIT PDFS
+          <br />
+          <span style={{ color: 'var(--ink-cloud)' }}>LIKE A HERO</span>
+        </h1>
+
+        {/* Subtitle */}
+        <p
+          className="animate-entrance"
+          style={
+            {
+              color: 'var(--ink-black)',
+              fontFamily: 'var(--font-pixel-body)',
+              fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+              lineHeight: 1.6,
+              maxWidth: '520px',
+              fontWeight: 400,
+              animationDelay: '400ms',
+              '--slide-y': '16px',
+              background: 'var(--ink-paper)',
+              border: '3px solid var(--ink-black)',
+              boxShadow: '4px 4px 0 0 var(--ink-black)',
+              padding: '14px 18px',
+            } as CSSProperties
+          }
+        >
+          A private, browser-based PDF editor that preserves your document's
+          typography.{' '}
+          <span style={{ color: 'var(--ink-brick-dark)' }}>
+            No uploads. No accounts. No compromises.
+          </span>
+        </p>
       </div>
 
-      {/* Display Headline */}
-      <h1
-        className="animate-entrance"
-        style={{
-          fontFamily: 'var(--font-display)',
-          color: 'var(--text-primary)',
-          fontSize: 'clamp(3.2rem, 9vw, 6rem)',
-          lineHeight: 0.92,
-          letterSpacing: '-0.04em',
-          fontWeight: 800,
-          marginBottom: '28px',
-          animationDelay: '200ms',
-          '--slide-y': '30px',
-        } as React.CSSProperties}
+      {/* Right column: Inky mascot */}
+      <div
+        className="hidden md:flex flex-col items-center justify-end animate-entrance"
+        style={
+          {
+            animationDelay: '500ms',
+            '--slide-y': '20px',
+            minHeight: '200px',
+            position: 'relative',
+          } as CSSProperties
+        }
       >
-        Edit PDFs,{' '}
-        <span className="gradient-text" style={{ fontStyle: 'italic', paddingRight: '0.15em', marginRight: '-0.1em' }}>
-          beautifully
-        </span>
-        <span style={{ color: 'var(--accent)' }}>.</span>
-      </h1>
-
-      {/* Subtitle */}
-      <p
-        className="animate-entrance"
-        style={{
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-sans)',
-          fontSize: 'clamp(1rem, 2.2vw, 1.2rem)',
-          lineHeight: 1.7,
-          maxWidth: '480px',
-          margin: '0 auto',
-          fontWeight: 400,
-          animationDelay: '400ms',
-          '--slide-y': '16px',
-        } as React.CSSProperties}
-      >
-        A private, browser-based editor that preserves your document's typography.{' '}
-        <span style={{ color: 'var(--text-muted)' }}>No uploads. No accounts. No compromises.</span>
-      </p>
+        <Inky action="idle" size={7} autoFidget />
+        {/* Pixel grass tuft beneath Inky */}
+        <div
+          style={{
+            width: '160px',
+            height: '10px',
+            background:
+              'linear-gradient(180deg, var(--ink-grass) 0 5px, var(--ink-grass-dark) 5px 10px)',
+            border: '3px solid var(--ink-black)',
+            marginTop: '8px',
+          }}
+        />
+      </div>
     </div>
   )
 }

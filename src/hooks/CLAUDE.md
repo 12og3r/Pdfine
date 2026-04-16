@@ -21,6 +21,14 @@ PDF export workflow with progress tracking.
 - Triggers browser download: `{originalName}_edited.pdf`
 - Returns `{ exportPdf, isExporting, progress }`
 
+### useSfx.ts
+Inkworld 8-bit sound effects — synthesized at call time via `AudioContext` oscillators. No audio files shipped.
+- **Sounds**: `click` (button tap), `coin` (save/success), `jump` (upload/edit-mode entry), `error` (failure), `powerUp` (export done)
+- Single shared `AudioContext`, resumed lazily on first play
+- Mute state persists in `localStorage` under `pdfine-muted`
+- Exposes `{ play, muted, setMuted, toggleMute }`
+- Cosmetic-only — `play()` fails silently if WebAudio is unavailable
+
 ### useKeyboardShortcuts.ts
 Global keyboard shortcuts (window keydown listener).
 - **Ctrl+Z/Y**: Undo/Redo

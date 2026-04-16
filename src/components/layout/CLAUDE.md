@@ -1,49 +1,54 @@
 # components/layout
 
 ## Purpose
-Top-level layout components that structure the editor UI — dark chrome header, property panel, and page navigation.
+Top-level layout components that structure the editor UI — brick/wood chrome header, cream paper property panel, and page navigation. All using the **Inkworld** pixel theme.
 
 ## Files
 
 ### Header.tsx
-Dark header bar (48px) with chrome background.
-- **Left**: Back button (ChevronLeft) + divider + file name in monospace
-- **Center**: Zoom controls (absolutely centered) in translucent pill with border, JetBrains Mono percentage
-- **Right**: Gradient accent export button with Download icon (`btn-accent` class)
-- Back button calls `useUIStore.setDocumentLoaded(false)` to return to landing page
+Brick-wood header bar (56px) with a 4px ink-black bottom border.
+- **Left**: ChevronLeft back button + mini coin-block logo + file name in Press Start 2P
+- **Center**: Zoom controls in a brick-dark pixel pill (minus / % / plus buttons, hard borders)
+- **Right**: Mute toggle (Volume2/VolumeX icon) + coin-yellow EXPORT `pixel-btn`
+- Back button calls `useUIStore.setDocumentLoaded(false)` to return to landing
 - Zoom buttons enforce MIN_ZOOM/MAX_ZOOM bounds
-- All interactive elements use accent-soft hover states on dark background
+- Wired to `useSfx()`: click on navigation, coin+powerUp on export
 
 ### PropertyPanel.tsx
-Right sidebar (248px) with dark chrome background for editing text properties.
-- Dark theme: `var(--chrome)` background, white text, chrome borders
-- `SectionLabel` (uppercase, 0.3 white) and `DarkStyleButton` helper components
-- Active style buttons use `var(--accent)` background
-- Input fields use `rgba(255,255,255,0.06)` background
-- Empty state shows monospace hint text
-- Font selector, font size, bold/italic/underline toggles
-- Color picker, alignment buttons, line spacing slider
-- Overflow warning with amber/warning tones
-- Uses `custom-scrollbar-dark` CSS class
+Right sidebar (260px) with cream paper background for editing text properties.
+- Background: `var(--ink-paper)`, 4px ink-black left border
+- `SectionLabel`: Press Start 2P at 9px, brick-dark color, uppercase, letter-spaced
+- `PixelStyleButton`: 36×36 pixel buttons with coin-yellow active state (inset dark shadow = pressed)
+- Font selector, font size input (Press Start 2P numbers), bold/italic/underline toggles
+- Color picker with Inkworld-palette presets + custom hex input
+- Alignment buttons, line spacing slider
+- Overflow warning: red pixel banner with 3px offset shadow
+- Empty state: "SELECT A TEXT BLOCK" in Press Start 2P + directional arrows
+- Uses `custom-scrollbar` CSS class (chunky brick scrollbar)
 
 ### PageNavigator.tsx
-Bottom-right floating control with dark chrome background for multi-page navigation.
-- Rounded-xl, padding 5px, chrome border, deep box-shadow
-- Buttons 32px (p-2) with 16px chevron icons
-- Page numbers in JetBrains Mono at 12px, `rgba(255,255,255,0.6)`
+Bottom-right floating control for multi-page navigation.
+- Deep brick-brown background, 3px ink-black border, 4px hard offset shadow
+- Buttons 36×36 with chevron icons, coin-yellow on hover
+- Page numbers in Press Start 2P at 10px, coin-yellow color
 - Hidden when totalPages <= 1
-- 0-based indexing internally, 1-based display to users
+- Plays `click` SFX on page change
 
 ## Patterns
 - All components accept `editorCore: IEditorCore` prop
 - Dual sync: changes update both UIStore AND editorCore
-- **Dark chrome theme**: all editor chrome uses `var(--chrome)` background with `var(--chrome-text)` / `var(--chrome-text-muted)`
-- Hover states use `var(--chrome-hover)` background, color transitions to chrome-text
-- `lucide-react` icons throughout
+- **Inkworld theme tokens**:
+  - Chrome background: `var(--ink-brick-deep)` (editor header) or `var(--ink-paper)` (property panel)
+  - Text: `var(--ink-paper)` / `var(--ink-coin)` on dark chrome, `var(--ink-black)` on paper
+  - Hover: coin-yellow highlight on brick; paper-dark highlight on cream
+- No rounded corners anywhere
+- Hard offset shadows (`Xpx Xpx 0 0 var(--ink-black)`)
+- Press Start 2P for all labels; DotGothic16 only for long body copy
+- `lucide-react` icons retained (lightweight, single-color, consistent with pixel border weight)
 
 ## Dependencies
 - `store/uiStore`, `core/interfaces/IEditorCore`, `types/ui`, `types/document`
 - `config/constants` (zoom bounds)
-- `hooks/useExportPdf` (Header only)
+- `hooks/useExportPdf`, `hooks/useSfx` (Header)
 - `components/ui/*` (Button, ColorPicker, FontSelector, Tooltip)
 - `lucide-react`

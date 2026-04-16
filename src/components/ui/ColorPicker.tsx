@@ -7,15 +7,15 @@ interface ColorPickerProps {
 }
 
 const PRESET_COLORS: Array<{ color: Color; label: string }> = [
-  { color: { r: 0, g: 0, b: 0 }, label: 'Black' },
-  { color: { r: 75, g: 85, b: 99 }, label: 'Dark Gray' },
-  { color: { r: 239, g: 68, b: 68 }, label: 'Red' },
-  { color: { r: 245, g: 158, b: 11 }, label: 'Orange' },
-  { color: { r: 234, g: 179, b: 8 }, label: 'Yellow' },
-  { color: { r: 34, g: 197, b: 94 }, label: 'Green' },
-  { color: { r: 59, g: 130, b: 246 }, label: 'Blue' },
-  { color: { r: 99, g: 102, b: 241 }, label: 'Indigo' },
-  { color: { r: 168, g: 85, b: 247 }, label: 'Purple' },
+  { color: { r: 43, g: 43, b: 84 }, label: 'Ink' },
+  { color: { r: 140, g: 75, b: 29 }, label: 'Brick Dark' },
+  { color: { r: 214, g: 51, b: 31 }, label: 'Red' },
+  { color: { r: 209, g: 127, b: 68 }, label: 'Brick' },
+  { color: { r: 255, g: 224, b: 69 }, label: 'Coin' },
+  { color: { r: 126, g: 200, b: 80 }, label: 'Grass' },
+  { color: { r: 80, g: 161, b: 71 }, label: 'Pipe' },
+  { color: { r: 95, g: 205, b: 228 }, label: 'Sky' },
+  { color: { r: 58, g: 123, b: 213 }, label: 'Deep Sky' },
 ]
 
 function colorToHex(c: Color): string {
@@ -38,24 +38,41 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [customHex, setCustomHex] = useState(colorToHex(value))
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-5 gap-1.5">
-        {PRESET_COLORS.map(({ color, label }) => (
-          <button
-            key={label}
-            title={label}
-            className={`w-7 h-7 rounded-md border-2 cursor-pointer transition-transform hover:scale-110 ${
-              colorsEqual(value, color) ? 'border-[var(--color-primary)] scale-110' : 'border-[var(--color-gray-200)]'
-            }`}
-            style={{ backgroundColor: colorToHex(color) }}
-            onClick={() => {
-              onChange(color)
-              setCustomHex(colorToHex(color))
-            }}
-          />
-        ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: '6px',
+        }}
+      >
+        {PRESET_COLORS.map(({ color, label }) => {
+          const selected = colorsEqual(value, color)
+          return (
+            <button
+              key={label}
+              title={label}
+              style={{
+                width: '100%',
+                aspectRatio: '1',
+                backgroundColor: colorToHex(color),
+                border: '3px solid var(--ink-black)',
+                boxShadow: selected
+                  ? 'inset 0 0 0 2px var(--ink-coin), 2px 2px 0 0 var(--ink-black)'
+                  : '2px 2px 0 0 var(--ink-black)',
+                cursor: 'pointer',
+                transform: selected ? 'translate(-1px, -1px)' : 'translate(0, 0)',
+                transition: 'all 80ms steps(2)',
+              }}
+              onClick={() => {
+                onChange(color)
+                setCustomHex(colorToHex(color))
+              }}
+            />
+          )
+        })}
       </div>
-      <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <input
           type="color"
           value={customHex}
@@ -63,7 +80,13 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             setCustomHex(e.target.value)
             onChange(hexToColor(e.target.value))
           }}
-          className="w-7 h-7 rounded cursor-pointer border-0 p-0"
+          style={{
+            width: '30px',
+            height: '30px',
+            border: '3px solid var(--ink-black)',
+            cursor: 'pointer',
+            padding: 0,
+          }}
         />
         <input
           type="text"
@@ -74,8 +97,16 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               onChange(hexToColor(e.target.value))
             }
           }}
-          className="flex-1 text-xs px-2 py-1 border border-[var(--color-gray-200)] rounded-md font-mono"
-          placeholder="#000000"
+          style={{
+            flex: 1,
+            fontSize: '10px',
+            padding: '6px 8px',
+            border: '3px solid var(--ink-black)',
+            fontFamily: 'var(--font-display)',
+            background: 'var(--ink-cloud)',
+            color: 'var(--ink-black)',
+          }}
+          placeholder="#2B2B54"
         />
       </div>
     </div>

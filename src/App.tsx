@@ -5,13 +5,16 @@ import { Header } from './components/layout/Header'
 import { EditorCanvas } from './components/editor/EditorCanvas'
 import { PasswordModal } from './components/upload/PasswordModal'
 import { PageNavigator } from './components/layout/PageNavigator'
+import { Inky } from './components/mascot'
 import { useEditorCore } from './hooks/useEditorCore'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useSfx } from './hooks/useSfx'
 
 function App() {
   const documentLoaded = useUIStore((s) => s.documentLoaded)
   const showPasswordModal = useUIStore((s) => s.showPasswordModal)
   const editorCore = useEditorCore()
+  const { play } = useSfx()
 
   const [showEditor, setShowEditor] = useState(documentLoaded)
   const [isExiting, setIsExiting] = useState(false)
@@ -27,6 +30,7 @@ function App() {
   useEffect(() => {
     if (documentLoaded) {
       setIsExiting(true)
+      play('powerUp')
       const timer = setTimeout(() => {
         setShowEditor(true)
         setIsExiting(false)
@@ -36,7 +40,7 @@ function App() {
       setShowEditor(false)
       setIsExiting(false)
     }
-  }, [documentLoaded])
+  }, [documentLoaded, play])
 
   useKeyboardShortcuts(editorCore)
 
@@ -50,62 +54,63 @@ function App() {
     )
   }
 
-  // Mobile warning
+  // Mobile warning — pixel version
   if (isMobile) {
     return (
       <div
-        className="w-full h-full flex flex-col items-center justify-center overflow-hidden relative"
-        style={{ background: 'var(--bg)', padding: '32px 24px' }}
+        className="w-full h-full flex flex-col items-center justify-center overflow-hidden relative lumen-bg"
+        style={{ padding: '32px 24px' }}
       >
-        {/* Background gradient orbs */}
+        {/* Floating clouds */}
+        <div className="pixel-cloud" style={{ top: '12%', left: '8%', animation: 'float 6s steps(6) infinite' }} />
         <div
+          className="pixel-cloud"
           style={{
-            position: 'absolute',
-            top: '-20%',
-            right: '-30%',
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%)',
-            filter: 'blur(60px)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '-10%',
-            left: '-20%',
-            width: '300px',
-            height: '300px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(6, 182, 212, 0.06) 0%, transparent 70%)',
-            filter: 'blur(60px)',
-            pointerEvents: 'none',
+            top: '22%',
+            right: '10%',
+            width: '64px',
+            height: '28px',
+            animation: 'float 8s steps(6) infinite',
+            animationDelay: '-2s',
           }}
         />
 
         {/* Logo */}
         <div
           className="flex items-center animate-fade-in"
-          style={{ gap: '10px', marginBottom: '48px' }}
+          style={{ gap: '12px', marginBottom: '36px', zIndex: 2 }}
         >
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{
-              background: 'var(--gradient-accent)',
-              boxShadow: '0 2px 10px rgba(99, 102, 241, 0.2)',
+              width: '36px',
+              height: '36px',
+              background: 'var(--ink-coin)',
+              border: '3px solid var(--ink-black)',
+              boxShadow: 'inset -3px -3px 0 0 var(--ink-coin-dark), inset 3px 3px 0 0 #FFF07A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                color: 'var(--ink-black)',
+              }}
+            >
+              P
+            </span>
           </div>
           <span
-            className="text-[15px] font-bold tracking-[-0.02em]"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}
+            style={{
+              color: 'var(--ink-black)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '14px',
+              letterSpacing: '0.05em',
+            }}
           >
-            Pdfine
+            PDFINE
           </span>
         </div>
 
@@ -116,118 +121,60 @@ function App() {
         >
           <div
             style={{
-              position: 'relative',
-              background: 'var(--surface)',
-              borderRadius: '20px',
-              padding: '40px 32px',
-              border: '1px solid var(--border-solid)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(99, 102, 241, 0.04)',
+              background: 'var(--ink-paper)',
+              padding: '36px 28px',
+              border: '4px solid var(--ink-black)',
+              boxShadow: '6px 6px 0 0 var(--ink-black)',
               textAlign: 'center',
-              overflow: 'hidden',
             }}
           >
-            {/* Subtle gradient accent at top */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '60%',
-                height: '2px',
-                background: 'var(--gradient-accent)',
-                borderRadius: '0 0 2px 2px',
-              }}
-            />
-
-            {/* Icon */}
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(6, 182, 212, 0.06))',
-                border: '1px solid rgba(99, 102, 241, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 24px',
-              }}
-            >
-              <svg
-                style={{ width: '28px', height: '28px', color: '#6366F1' }}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z" />
-              </svg>
+            {/* Inky confused */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+              <Inky action="confused" size={5} />
             </div>
 
-            {/* Title */}
             <h2
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '22px',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                color: 'var(--text-primary)',
-                marginBottom: '8px',
+                fontSize: '14px',
+                color: 'var(--ink-black)',
+                letterSpacing: '0.05em',
+                marginBottom: '12px',
               }}
             >
-              Built for Desktop
+              DESKTOP ONLY!
             </h2>
 
-            {/* Description */}
             <p
               style={{
-                fontSize: '14px',
-                lineHeight: '1.6',
-                color: 'var(--text-secondary)',
-                marginBottom: '28px',
+                fontFamily: 'var(--font-pixel-body)',
+                fontSize: '15px',
+                lineHeight: 1.55,
+                color: 'var(--ink-brick-dark)',
+                marginBottom: '22px',
               }}
             >
-              Pdfine uses canvas-based editing that requires a larger screen. Open this page on your computer for the full experience.
+              Pdfine uses canvas-based editing that requires a larger screen. Open this page on your computer for the full adventure.
             </p>
 
-            {/* Divider */}
             <div
               style={{
-                height: '1px',
-                background: 'linear-gradient(90deg, transparent, var(--border-solid), transparent)',
-                marginBottom: '20px',
+                height: '3px',
+                background: 'var(--ink-black)',
+                marginBottom: '18px',
               }}
             />
 
-            {/* Hint */}
-            <div
+            <p
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
+                fontFamily: 'var(--font-display)',
+                fontSize: '8px',
+                color: 'var(--ink-brick-dark)',
+                letterSpacing: '0.08em',
               }}
             >
-              <svg
-                style={{ width: '14px', height: '14px', color: 'var(--text-ghost)', flexShrink: 0 }}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.686a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364l1.757 1.757" />
-              </svg>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: 'var(--text-muted)',
-                  fontWeight: 500,
-                }}
-              >
-                Copy the URL and open it on desktop
-              </span>
-            </div>
+              📎 COPY URL → OPEN ON DESKTOP
+            </p>
           </div>
         </div>
       </div>
@@ -236,7 +183,10 @@ function App() {
 
   // Editor view
   return (
-    <div className="w-full h-full flex flex-col" style={{ background: 'var(--chrome)' }}>
+    <div
+      className="w-full h-full flex flex-col relative"
+      style={{ background: 'var(--ink-brick-deep)' }}
+    >
       <div className="animate-fade-in">
         <Header editorCore={editorCore} />
       </div>
@@ -247,10 +197,23 @@ function App() {
             <EditorCanvas editorCore={editorCore} />
           </div>
 
+          {/* Inky mascot — bottom-left corner of editor, idle */}
+          <div
+            className="absolute z-10 pointer-events-none"
+            style={{
+              bottom: '16px',
+              left: '16px',
+              animation: 'fadeSlideInBottom 0.4s steps(4) 400ms forwards',
+              opacity: 0,
+            }}
+          >
+            <Inky action="idle" size={3} autoFidget />
+          </div>
+
           {/* Page Navigator */}
           <div
             className="absolute bottom-4 right-4 z-10"
-            style={{ animation: 'fadeSlideInBottom 0.4s ease-out 250ms forwards', opacity: 0 }}
+            style={{ animation: 'fadeSlideInBottom 0.4s steps(4) 250ms forwards', opacity: 0 }}
           >
             <PageNavigator editorCore={editorCore} />
           </div>
