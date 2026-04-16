@@ -29,8 +29,9 @@ Embeds fonts into PDF via pdf-lib.
 ### OverlayRedrawStrategy.ts
 Redraws edited text using white rectangle overlay.
 - Draws white rect (with 2px padding) over original text bounds
-- Redraws glyphs character-by-character with correct font/size/color
-- Skips space characters
+- **Per-run redraw**: groups consecutive same-style glyphs within each line and emits ONE `page.drawText(runText, ...)` call per group, anchored at the first glyph's (x, baseline). The old per-glyph path positioned each character at its Canvas-measured layout x, which produced visible gaps when `FontEmbedder` fell back to `StandardFonts.Helvetica` (pdfjs v5 often registers a font via FontFace but doesn't expose raw binary — `getFontData()` returns undefined, so we embed Helvetica). Helvetica's advance widths don't match the original font's Canvas widths, so per-glyph placement made the title render as "Sem p l e PDF" after an edit. Letting pdf-lib advance through the run with the embedded font's own width table keeps spacing internally consistent regardless of fallback.
+- A run breaks on any change in `fontId`, `fontSize`, or color (`r`/`g`/`b`), or when the fontId has no embedded font (that glyph is dropped and a new run starts after it). Spaces stay inside the run so pdf-lib's own space-width contributes to advance.
+- **`\n` glyphs are skipped** — the parser's inter-line-join marker has zero layout width but `pdf-lib`'s `drawText` interprets a literal `\n` as a forced newline inside the run, which would emit spurious line breaks in the exported PDF. `ParagraphLayout.flattenRuns` normally converts `\n` → space upstream, but this skip is kept as defense-in-depth in case a glyph slips through with its original `\n` character.
 - Coordinates transformed from layout (Y-down) to PDF (Y-up) via CoordinateTransformer
 - **Color normalization**: `Color` stores channels as 0-255 ints (from the pdfjs operator-list parser), but `pdf-lib`'s `rgb()` expects 0-1. `redrawText` divides by 255 and clamps to `[0, 1]` before calling `rgb()`. Without this, any non-black run aborts the export with `assertRange` — first surfaced after the color-extraction fix (commit 21829f8) made blue/red titles exportable
 
@@ -55,5 +56,5 @@ Redraws edited text using white rectangle overlay.
 - Y-axis flip is critical: `py = pageHeight - layoutY`
 - `modifiedBlockIds` Set optimizes all stages (validation, embedding, redrawing)
 - White overlay won't work on colored/patterned PDF backgrounds
-- Individual glyph rendering means no ligatures or complex text shaping
+- Per-run drawing (current): pdf-lib handles intra-run advance using the embedded font's width table, so run widths may drift from the Canvas-measured layout widths when the embedded font is a fallback — acceptable trade-off vs the visible inter-glyph gaps of the old per-glyph path. No ligatures / complex text shaping.
 - Font embedding uses `subset: false` (full font, not just used glyphs)

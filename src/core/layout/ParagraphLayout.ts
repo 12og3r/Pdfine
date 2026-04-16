@@ -127,24 +127,47 @@ export class ParagraphLayout {
         run.pdfRunWidth = undefined;
         run.pdfLineWidths = undefined;
         for (let i = 0; i < run.text.length; i++) {
-          chars.push({
-            char: run.text[i],
-            style: run.style,
-            pdfWidth: proportionalWidths[i],
-          });
+          chars.push(this.charInfoFor(run.text[i], run.style, proportionalWidths[i]));
         }
       } else {
         for (let i = 0; i < run.text.length; i++) {
           const pdfWidth = run.pdfCharWidths?.[i];
-          chars.push({
-            char: run.text[i],
-            style: run.style,
-            pdfWidth: (pdfWidth !== undefined && !isNaN(pdfWidth)) ? pdfWidth : undefined,
-          });
+          chars.push(this.charInfoFor(
+            run.text[i],
+            run.style,
+            (pdfWidth !== undefined && !isNaN(pdfWidth)) ? pdfWidth : undefined,
+          ));
         }
       }
     }
     return chars;
+  }
+
+  /**
+   * Convert a single source character into a CharInfo for layout.
+   *
+   * The parser inserts '\n' between PDF lines (TextBlockBuilder) to mark where
+   * the original PDF's text engine wrapped the paragraph. In the PDF itself
+   * those line breaks encode an implicit word separator — the reader sees
+   * "...Integer" at end of line N and "odio..." at start of line N+1 as a
+   * word boundary, not a concatenation. But the '\n' character has zero
+   * drawable width and no semantics to Canvas/pdf-lib, so when the layout
+   * re-flows content across a '\n' boundary (after an edit) the two words
+   * end up visually glued ("Integernec"). Map '\n' to a real space here
+   * so the layout, measurement, rendering, and export pipelines all treat
+   * it as a word separator with natural canvas-measured space width. Leaves
+   * `run.text` untouched — paragraph-level newlines (hard breaks from Enter)
+   * live between paragraphs in the DocumentModel, not inside a run.
+   */
+  private charInfoFor(
+    char: string,
+    style: TextStyle,
+    pdfWidth: number | undefined,
+  ): CharInfo {
+    if (char === '\n') {
+      return { char: ' ', style, pdfWidth: undefined };
+    }
+    return { char, style, pdfWidth };
   }
 
   /**

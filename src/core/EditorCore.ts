@@ -476,27 +476,18 @@ export class EditorCore implements IEditorCore {
       this.editEngine.exitEditMode()
     }
 
-    this.layoutEngine.setStrategy('knuth-plass')
-    for (let i = 0; i < this.documentModel.pages.length; i++) {
-      if (this.documentModel.pages[i].dirty) {
-        this.documentModel.pages[i] = this.layoutEngine.reflowPage(
-          this.documentModel.pages[i],
-          this.fontManager
-        )
-      }
-    }
-
-    const result = await this.exportModule.export(
+    // Export uses the layout the editor has been maintaining on every edit
+    // (via `reflowTextBlock` in the `textChanged` / `editStart` handlers).
+    // Swapping to knuth-plass + calling `reflowPage` here would discard that
+    // layout and produce different line breaks than what the user just saw,
+    // so the exported PDF would not match the editor — WYSIWYG-breaking.
+    return await this.exportModule.export(
       this.originalPdfData,
       this.documentModel,
       this.fontManager,
       onProgress,
       this.modifiedBlockIds
     )
-
-    this.layoutEngine.setStrategy('greedy')
-
-    return result
   }
 
   // =============== Event Subscription ===============

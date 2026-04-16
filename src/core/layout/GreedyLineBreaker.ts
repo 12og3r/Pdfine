@@ -51,12 +51,15 @@ export class GreedyLineBreaker {
       const letterSpacing = style.letterSpacing ?? 0;
       const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
 
-      // Newline forces a break
+      // '\n' inside a run is the parser's inter-line-join marker — it comes
+      // from PDF-internal algorithmic line wrapping (see
+      // core/parser/TextBlockBuilder.ts), NOT a semantic hard break. Treat it
+      // as a zero-width BREAK OPPORTUNITY: the paragraph can break here if it
+      // overflows, but must not force a break when the content would otherwise
+      // fit. Forcing a break orphans trailing words when an edit slightly
+      // widens an earlier line (e.g. 'ipsum' → 'Apsum' orphaning 'nec').
       if (char === '\n') {
-        breaks.push(i + 1);
-        lineWidth = 0;
-        lastBreakOpportunity = -1;
-        lineStart = i + 1;
+        lastBreakOpportunity = i;
         continue;
       }
 
@@ -74,8 +77,10 @@ export class GreedyLineBreaker {
         if (lastBreakOpportunity > lineStart) {
           // Break at last opportunity
           let breakAt = lastBreakOpportunity;
-          // For spaces, break after the space
-          if (chars[breakAt].char === ' ') {
+          // For spaces and '\n' markers, break AFTER the character so the
+          // zero/white-space trailing glyph stays on the previous line (and
+          // gets trimmed by ParagraphLayout's trailing-space/newline trim).
+          if (chars[breakAt].char === ' ' || chars[breakAt].char === '\n') {
             breakAt = breakAt + 1;
           }
           breaks.push(breakAt);

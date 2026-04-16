@@ -47,11 +47,36 @@ describe('GreedyLineBreaker', () => {
     expect(breaks[0]).toBe(6) // after 'Hello '
   })
 
-  it('should handle explicit newlines', () => {
+  it('should treat \\n (PDF inter-line marker) as soft break opportunity, not hard break', () => {
+    // \n inside a run is the parser's inter-line-join marker — PDF-internal
+    // line wrapping, NOT a semantic hard break. When the content comfortably
+    // fits on a single line, the breaker must NOT force a break at \n.
     const fm = createMockFontManager(7)
     const chars = textToChars('Line1\nLine2')
     const breaks = breaker.breakLines(chars, 500, fm, 1.2)
-    expect(breaks).toContain(6) // after 'Line1\n'
+    expect(breaks).toEqual([])
+  })
+
+  it('should allow content to flow across \\n when an edit slightly widens an earlier line', () => {
+    // Regression: two PDF lines joined by \n — "foo bar" and "baz nec". After
+    // a small edit the first segment becomes "foo bars" and pushes "bars" to
+    // wrap; without the fix, the trailing \n forces a new line immediately
+    // after "bars", orphaning "baz nec" / "nec". With \n as a soft break,
+    // greedy re-flows the whole paragraph naturally.
+    const fm = createMockFontManager(10)
+    // maxWidth = 80 → fits ~8 chars. "foo bars\nbaz nec" = 16 chars.
+    const chars = textToChars('foo bars\nbaz nec')
+    const breaks = breaker.breakLines(chars, 80, fm, 1.2)
+    // Must not produce a line that contains only 'nec' at the end.
+    const ranges: Array<[number, number]> = []
+    let s = 0
+    for (const b of breaks) { ranges.push([s, b]); s = b }
+    ranges.push([s, chars.length])
+    const lineTexts = ranges.map(([a, b]) =>
+      chars.slice(a, b).map(c => c.char).join('').replace(/\n/g, '↵').trim(),
+    )
+    // No line should be just 'nec' — that was the observed orphan symptom.
+    expect(lineTexts.some(t => t === 'nec')).toBe(false)
   })
 
   it('should handle empty input', () => {

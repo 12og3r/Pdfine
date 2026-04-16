@@ -14,6 +14,7 @@ Orchestrator implementing `ILayoutEngine`.
 ### ParagraphLayout.ts
 Handles individual paragraph layout.
 - `flattenRuns(paragraph, fontManager)` → CharInfo[] (flat character array with styles and optional `pdfWidth`); computes proportional per-char widths from `pdfRunWidth`/`pdfLineWidths` using `computeProportionalWidths()`, then **stores them back** on `run.pdfCharWidths` and clears `run.pdfRunWidth`/`pdfLineWidths` so subsequent layouts (after text insertion) preserve original character widths
+- **`\n` is converted to a real space** inside `flattenRuns` (via `charInfoFor`). The parser inserts `\n` between original PDF lines to preserve the source line structure, but `\n` has zero drawable width and no semantics to Canvas / pdf-lib, so when an edit re-flows content across a `\n` the surrounding words would visually glue together ("Integernec"). Mapping it to a space here gives layout / measure / render / export one consistent word-separator — with canvas-measured space width — without touching `run.text` (so edit offsets remain stable)
 - `computeProportionalWidths()` — when `pdfLineWidths` is available, scales each `\n`-delimited segment independently via `scalePerSegment()` to match per-line PDF widths; otherwise falls back to single scale factor for the entire run
 - `layoutParagraph(paragraph, maxWidth, fontManager, lineBreaker, startY)` → LayoutLine[]
 - When a paragraph has `pdfLineHeight` set, the effective "baseline offset from line top" is LOCKED to the first line's ascent for every subsequent line. Using each line's own ascent instead produces correct baselines only when all lines share an ascent; mixed-font paragraphs (e.g. 36pt title + 18pt subtitle) end up with smaller lines shifted `(firstAscent - thisAscent)` px above their pdfjs baseline. Anchoring to the first line's ascent keeps `lineY += lineHeight` advance intact (so overflow detection / contentHeight accounting stay stable) while still placing glyphs at the correct absolute baseline.
@@ -24,6 +25,7 @@ Handles individual paragraph layout.
 ### GreedyLineBreaker.ts
 Fast O(n) first-fit line breaking.
 - Breaks at: word boundaries (spaces), hyphens, between CJK characters
+- **`\n` is a SOFT break opportunity, not a forced break.** The parser's inter-line-join `\n` represents the PDF's internal wrap — it must be re-flowable. Treating it as a hard break orphans content when an edit widens a preceding line (symptom: editing `ipsum → Apsum` leaves `nec` stranded on its own line). When a break fires at `\n`, the break is placed AFTER the marker so the zero-width glyph is trimmed with trailing whitespace by `ParagraphLayout`. Note that `ParagraphLayout.flattenRuns` additionally maps `\n` → `' '` before this breaker ever sees it, so in practice the breaker sees a normal space; the explicit `\n` handling remains as defense-in-depth for any code path that bypasses the helper
 - CJK punctuation rules: NO_LINE_START / NO_LINE_END sets
 - Emergency breaks when no opportunity exists before exceeding width
 - 0.5px soft-wrap tolerance to avoid false breaks from floating-point rounding in PDF width scaling

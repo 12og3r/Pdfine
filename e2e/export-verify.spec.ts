@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
-import { execSync } from 'child_process'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -87,12 +86,22 @@ test('exported PDF should contain edited text', async ({ page }) => {
   const stat = fs.statSync(outPath)
   console.log('File size:', stat.size)
 
-  // Verify the exported PDF contains the edited text by decompressing streams
-  // pdf-lib writes text as hex-encoded Tj operations: <48> Tj
-  const pdfBytes = fs.readFileSync(outPath)
-  const originalSize = fs.statSync(VISA_PDF).size
-  console.log('Original size:', originalSize, 'Exported size:', stat.size)
-
-  // File size should be larger than original (new content added)
-  expect(stat.size).toBeGreaterThan(originalSize)
+  // Verify the exported PDF actually contains the edited text. Earlier this
+  // test used `exportSize > originalSize` as a proxy for "content was added",
+  // but that heuristic is fragile: the per-run drawText redraw produces far
+  // fewer content-stream ops than the old per-glyph path, so the export can
+  // be smaller than the original even when the edit was applied correctly.
+  // Parse the PDF with pdfjs (Node side) and assert the marker text is there.
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const data = new Uint8Array(fs.readFileSync(outPath))
+  const pdfDoc = await pdfjs.getDocument({ data, isEvalSupported: false, useSystemFonts: false }).promise
+  const allItems: string[] = []
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const pg = await pdfDoc.getPage(i)
+    const content = await pg.getTextContent()
+    for (const it of content.items as Array<{ str: string }>) allItems.push(it.str)
+  }
+  const joined = allItems.join('|')
+  console.log('Exported text (first 500 chars):', joined.slice(0, 500))
+  expect(joined, 'exported PDF should contain "XYZMARKER"').toContain('XYZMARKER')
 })
