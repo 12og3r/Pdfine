@@ -25,6 +25,7 @@ Embeds fonts into PDF via pdf-lib.
 - `pdfDoc.embedFont(fontData, { subset: false })` — full font embedding
 - Falls back to `StandardFonts.Helvetica` if font data unavailable
 - Caches embedded PDFFont objects to avoid redundant embedding
+- **Cache is scoped per PDFDocument.** Each `export()` call loads a fresh `PDFDocument` and `PDFFont` objects are bound to the doc that embedded them — reusing a cached `PDFFont` across documents leaves pdf-lib emitting a `/Font` entry whose indirect ref points at the previous document's object graph (`BaseFont undefined`). pdfjs is lenient and falls back to a default font; strict PDF viewers (Preview.app, Acrobat, iOS Quick Look) can't resolve it and render the whole overlay-drawn paragraph as blank. `resetCacheIfDocChanged(pdfDoc)` clears the cache whenever the incoming `pdfDoc` differs from the one the cache was built for.
 
 ### OverlayRedrawStrategy.ts
 Redraws edited text using white rectangle overlay.

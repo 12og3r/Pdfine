@@ -4,13 +4,22 @@ import type { DocumentModel, TextBlock } from '../../types/document'
 import type { IFontManager } from '../interfaces/IFontManager'
 
 export class FontEmbedder {
+  // Cache is scoped to a single PDFDocument instance. Each `export()` call
+  // loads a fresh PDFDocument, and PDFFont objects are bound to the document
+  // that embedded them — reusing a PDFFont across documents leaves pdf-lib
+  // emitting a /Font entry whose indirect ref points at the previous
+  // document's object graph (BaseFont undefined). pdfjs is lenient and falls
+  // back, but strict PDF viewers (Preview.app, Acrobat, iOS) can't resolve
+  // the font and render the whole overlay text as blank. Reset on each export.
   private cache = new Map<string, PDFFont>();
+  private cacheDoc: PDFDocument | null = null;
 
   async embedFont(
     pdfDoc: PDFDocument,
     fontId: string,
     fontManager: IFontManager
   ): Promise<PDFFont> {
+    this.resetCacheIfDocChanged(pdfDoc);
     const cached = this.cache.get(fontId);
     if (cached) return cached;
 
@@ -36,6 +45,7 @@ export class FontEmbedder {
     fontManager: IFontManager,
     modifiedBlockIds?: Set<string>
   ): Promise<Map<string, PDFFont>> {
+    this.resetCacheIfDocChanged(pdfDoc);
     const fontIds = new Set<string>();
 
     for (const page of model.pages) {
@@ -57,5 +67,12 @@ export class FontEmbedder {
     }
 
     return this.cache;
+  }
+
+  private resetCacheIfDocChanged(pdfDoc: PDFDocument): void {
+    if (this.cacheDoc !== pdfDoc) {
+      this.cache.clear();
+      this.cacheDoc = pdfDoc;
+    }
   }
 }
