@@ -455,6 +455,7 @@ button, input, textarea, select {
   border: 3px solid var(--ink-black);
   border-radius: 20px;
   box-shadow: 4px 4px 0 0 rgba(43, 43, 84, 0.15);
+  will-change: transform;
 }
 .pixel-cloud::before,
 .pixel-cloud::after {
@@ -496,6 +497,7 @@ button, input, textarea, select {
   box-shadow: inset -3px -3px 0 var(--ink-coin-dark), inset 3px 3px 0 #FFF07A;
   border-radius: 50%;
   animation: coinSpin 1.2s steps(4) infinite;
+  will-change: transform;
 }
 @keyframes coinSpin {
   0% { transform: scaleX(1); }
@@ -564,26 +566,32 @@ button, input, textarea, select {
 .animate-entrance {
   opacity: 0;
   animation: fadeSlideUp 500ms steps(8) forwards;
+  will-change: transform, opacity;
 }
 .animate-reveal {
   opacity: 0;
   animation: revealUp 600ms steps(10) forwards;
+  will-change: transform, opacity;
 }
 .animate-scale-in {
   opacity: 0;
   animation: scaleIn 400ms steps(6) forwards;
+  will-change: transform, opacity;
 }
 .animate-scale-up {
   opacity: 0;
   animation: scaleUp 400ms steps(6) forwards;
+  will-change: transform, opacity;
 }
 .animate-fade-in {
   opacity: 0;
   animation: fadeIn 400ms steps(4) forwards;
+  will-change: opacity;
 }
 .animate-blur-in {
   opacity: 0;
   animation: blurIn 500ms steps(6) forwards;
+  will-change: transform, opacity;
 }
 
 /* ===== Scroll Reveal ===== */
@@ -635,9 +643,11 @@ button, input, textarea, select {
 
 .animate-shake {
   animation: shake 400ms steps(8);
+  will-change: transform;
 }
 .animate-drop-bounce {
   animation: dropBounce 400ms steps(8);
+  will-change: transform;
 }
 .animate-icon-float {
   animation: iconFloat 1.2s steps(4) infinite;
@@ -698,6 +708,7 @@ button, input, textarea, select {
 
 .animate-card-exit {
   animation: cardExit 350ms steps(6) forwards;
+  will-change: transform, opacity;
 }
 
 /* ===== Editor Specific ===== */
@@ -803,11 +814,11 @@ button, input, textarea, select {
   75% { transform: translateX(2px); }
 }
 
-.inky-idle { animation: inkyIdleBob 1.2s steps(2) infinite; }
-.inky-walk { animation: inkyWalk 0.3s steps(2) infinite; }
-.inky-jump { animation: inkyJump 600ms steps(8); }
-.inky-celebrate { animation: inkyCelebrate 800ms steps(8) 2; }
-.inky-sneeze { animation: inkySneeze 300ms steps(4); }
+.inky-idle { animation: inkyIdleBob 1.2s steps(2) infinite; will-change: transform; }
+.inky-walk { animation: inkyWalk 0.3s steps(2) infinite; will-change: transform; }
+.inky-jump { animation: inkyJump 600ms steps(8); will-change: transform; }
+.inky-celebrate { animation: inkyCelebrate 800ms steps(8) 2; will-change: transform; }
+.inky-sneeze { animation: inkySneeze 300ms steps(4); will-change: transform; }
 
 /* ===== Focus Styles — chunky yellow outline ===== */
 :focus-visible {

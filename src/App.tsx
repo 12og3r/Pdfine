@@ -193,7 +193,7 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 relative overflow-hidden">
-          <div className="absolute inset-0 animate-fade-in" style={{ animationDelay: '80ms' }}>
+          <div className="absolute inset-0">
             <EditorCanvas editorCore={editorCore} />
           </div>
 
