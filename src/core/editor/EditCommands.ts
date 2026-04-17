@@ -61,6 +61,12 @@ export function splitRunAtOffset(paragraph: Paragraph, runIdx: number, localOffs
     before.pdfCharWidths = run.pdfCharWidths.slice(0, localOffset);
     after.pdfCharWidths = run.pdfCharWidths.slice(localOffset);
   }
+  // Each half inherits the same PDF→canvas proportional scale so later
+  // insertions in either half still match the original line's metric space.
+  if (run.pdfWidthScale !== undefined) {
+    before.pdfWidthScale = run.pdfWidthScale;
+    after.pdfWidthScale = run.pdfWidthScale;
+  }
   paragraph.runs.splice(runIdx, 1, before, after);
 }
 

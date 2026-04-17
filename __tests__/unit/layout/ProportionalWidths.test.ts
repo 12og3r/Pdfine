@@ -104,7 +104,7 @@ describe('Proportional PDF width scaling', () => {
     expect(allSame).toBe(false)
   })
 
-  it('should store computed proportional widths back on the run so subsequent layouts preserve them', () => {
+  it('should store computed proportional widths and scale back on the run so subsequent layouts preserve them and inserts keep the same scale', () => {
     const fm = createProportionalFontManager()
     const style = createTextStyle({ fontId: 'test', fontSize: 12 })
 
@@ -116,15 +116,15 @@ describe('Proportional PDF width scaling', () => {
     const paragraph: Paragraph = createParagraph([run], 'left', 1.2)
 
     // First layout: computes proportional widths
-    const lines1 = layout.layoutParagraph(paragraph, 500, fm, breaker, 0)
-    const glyphs1 = lines1[0].glyphs
+    layout.layoutParagraph(paragraph, 500, fm, breaker, 0)
 
-    // After first layout, run should have pdfCharWidths stored
+    // After first layout, run should have pdfCharWidths and pdfWidthScale stored
     expect(run.pdfCharWidths).toBeDefined()
     expect(run.pdfCharWidths!.length).toBe(3)
     expect(run.pdfCharWidths![0]).toBeCloseTo(16, 5) // V
     expect(run.pdfCharWidths![1]).toBeCloseTo(6, 5)  // i
     expect(run.pdfCharWidths![2]).toBeCloseTo(10, 5) // s
+    expect(run.pdfWidthScale).toBeCloseTo(2.0, 5)    // pdfRunWidth/canvasTotal = 32/16
 
     // pdfRunWidth should be cleared
     expect(run.pdfRunWidth).toBeUndefined()
@@ -134,7 +134,10 @@ describe('Proportional PDF width scaling', () => {
     // insertPlainText would splice NaN into pdfCharWidths for new char
     run.pdfCharWidths!.push(NaN)
 
-    // Second layout: should preserve original char widths, use canvas for new char
+    // Second layout: should preserve original char widths AND apply the same
+    // proportional scale to the inserted char (so a full-width line doesn't
+    // silently overflow when a single char is replaced with one whose canvas
+    // advance differs by <1 px — the "PDFObject → PDFAbject" wrap regression).
     const lines2 = layout.layoutParagraph(paragraph, 500, fm, breaker, 0)
     const glyphs2 = lines2[0].glyphs
 
@@ -142,8 +145,8 @@ describe('Proportional PDF width scaling', () => {
     expect(glyphs2[0].width).toBeCloseTo(16, 5) // V still 16
     expect(glyphs2[1].width).toBeCloseTo(6, 5)  // i still 6
     expect(glyphs2[2].width).toBeCloseTo(10, 5) // s still 10
-    // Z should use canvas measurement (6.0 default)
-    expect(glyphs2[3].width).toBeCloseTo(6, 5)
+    // Z should use canvas measurement × pdfWidthScale (6.0 * 2.0 = 12)
+    expect(glyphs2[3].width).toBeCloseTo(12, 5)
   })
 
   it('should fall back to canvas widths when no pdfRunWidth is set', () => {

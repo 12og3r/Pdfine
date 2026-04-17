@@ -102,6 +102,7 @@ export interface TextRun {
   pdfCharWidths?: number[];  // per-character advance widths from PDF (parallel to text chars)
   pdfRunWidth?: number;      // total PDF width for the run; used at layout time for proportional scaling
   pdfLineWidths?: number[];  // per-line-segment PDF widths (parallel to \n-delimited segments of text)
+  pdfWidthScale?: number;    // pdfRunWidth / canvas-measured total, captured at first layout so chars inserted later reuse the same proportional scale and don't tip PDF-sized lines past their block width
 }
 
 export interface TextStyle {

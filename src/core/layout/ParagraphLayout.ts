@@ -130,13 +130,28 @@ export class ParagraphLayout {
           chars.push(this.charInfoFor(run.text[i], run.style, proportionalWidths[i]));
         }
       } else {
+        // Chars with a valid pdfCharWidth keep it. Chars without one (NaN
+        // placeholders inserted by EditCommands.insertText, or brand-new runs
+        // that never had PDF widths) fall back to canvas measurement. When
+        // the run was originally PDF-scaled — the existing chars use widths
+        // computed as canvas_width * (pdfRunWidth / canvasTotal) — reusing
+        // the same `pdfWidthScale` factor for inserted chars keeps the whole
+        // line in one consistent metric space. Otherwise a single-char swap
+        // (e.g. 'O' → 'A' in a title sized exactly to its block.bounds.width)
+        // tips the line past the 0.5 px soft-wrap tolerance, forces a line
+        // break, and the block grows a whole line-height downward — covering
+        // the paragraph below.
+        const scale = run.pdfWidthScale;
         for (let i = 0; i < run.text.length; i++) {
           const pdfWidth = run.pdfCharWidths?.[i];
-          chars.push(this.charInfoFor(
-            run.text[i],
-            run.style,
-            (pdfWidth !== undefined && !isNaN(pdfWidth)) ? pdfWidth : undefined,
-          ));
+          let effective: number | undefined;
+          if (pdfWidth !== undefined && !isNaN(pdfWidth)) {
+            effective = pdfWidth;
+          } else if (scale !== undefined && run.text[i] !== '\n') {
+            effective = fontManager.measureChar(run.text[i], run.style.fontId, run.style.fontSize) * scale;
+            if (run.pdfCharWidths) run.pdfCharWidths[i] = effective;
+          }
+          chars.push(this.charInfoFor(run.text[i], run.style, effective));
         }
       }
     }
@@ -192,7 +207,17 @@ export class ParagraphLayout {
 
     // Per-line scaling: each \n-delimited segment uses its own PDF width
     if (run.pdfLineWidths && run.pdfLineWidths.length > 0) {
-      return this.scalePerSegment(text, canvasWidths, run.pdfLineWidths);
+      const scaled = this.scalePerSegment(text, canvasWidths, run.pdfLineWidths);
+      // Store an aggregate scale so later-inserted chars get approximately the
+      // same PDF compression as the existing ones. For multi-segment runs the
+      // per-segment scales are usually close (same font, same line), and a
+      // slight average drift is much smaller than the font-advance ≠
+      // PDF-placement gap we're correcting.
+      let canvasTotal = 0, pdfTotal = 0;
+      for (const w of canvasWidths) canvasTotal += w;
+      for (const w of run.pdfLineWidths) pdfTotal += w;
+      run.pdfWidthScale = canvasTotal > 0 ? pdfTotal / canvasTotal : 1;
+      return scaled;
     }
 
     // Fallback: single scale factor for the entire run
@@ -203,10 +228,12 @@ export class ParagraphLayout {
     if (canvasTotal === 0) {
       const visibleCount = text.split('').filter(c => c !== '\n').length;
       const uniform = visibleCount > 0 ? pdfRunWidth / visibleCount : 0;
+      run.pdfWidthScale = 1;
       return canvasWidths.map((_, i) => text[i] === '\n' ? 0 : uniform);
     }
 
     const scaleFactor = pdfRunWidth / canvasTotal;
+    run.pdfWidthScale = scaleFactor;
     return canvasWidths.map(w => w * scaleFactor);
   }
 

@@ -8,7 +8,7 @@ All core TypeScript type definitions for the PDF editor. Shared across the entir
 ### document.ts
 Core data model and edit commands.
 - **Model hierarchy**: DocumentModel → PageModel → PageElement (union) → TextBlock/ImageElement/PathElement/OverlayElement
-- **Text structure**: TextBlock → Paragraph[] → TextRun[] → TextStyle; TextRun has optional `pdfCharWidths?: number[]` for per-character widths, `pdfRunWidth?: number` for total PDF run width, and `pdfLineWidths?: number[]` for per-line-segment PDF widths (enables per-segment proportional scaling); Paragraph has optional `pdfLineHeight?: number` for actual PDF baseline-to-baseline distance (used to preserve native line spacing)
+- **Text structure**: TextBlock → Paragraph[] → TextRun[] → TextStyle; TextRun has optional `pdfCharWidths?: number[]` for per-character widths, `pdfRunWidth?: number` for total PDF run width, `pdfLineWidths?: number[]` for per-line-segment PDF widths (enables per-segment proportional scaling), and `pdfWidthScale?: number` (cached PDF→canvas ratio so chars inserted later share the same proportional scale as the originally-extracted ones); Paragraph has optional `pdfLineHeight?: number` for actual PDF baseline-to-baseline distance (used to preserve native line spacing)
 - **Layout output**: LayoutLine → PositionedGlyph (char with x, y, width, height, style)
 - **Edit commands**: Discriminated union (INSERT_TEXT, DELETE_TEXT, REPLACE_TEXT, CHANGE_STYLE, BATCH, etc.)
 - **Overflow state**: Discriminated union (normal, within_tolerance, auto_shrunk, overflowing)
