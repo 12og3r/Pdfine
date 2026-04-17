@@ -27,10 +27,13 @@ Overlay modal with ink-toned backdrop.
 - Entry: `animate-scale-up` + `animate-fade-in` (stepped)
 
 ### Tooltip.tsx
-Hover-activated pixel tooltip positioned above trigger element.
+Hover-activated pixel tooltip. Rendered via `createPortal` to `document.body` with `position: fixed` so it escapes any ancestor stacking context / clip region (the editor's `overflow: hidden` content row and sticky canvas used to clip it).
+- `side?: 'top' | 'bottom'` (default `top`) — which side of the trigger the bubble renders on. Use `bottom` for triggers near the top of the viewport (e.g. Header) so the tooltip doesn't clip above the window.
+- `align?: 'start' | 'center' | 'end'` (default `center`) — horizontal alignment relative to the trigger. Use `start` for leftmost triggers, `end` for rightmost, so a wide label doesn't clip past the viewport edge. Position is also clamped to the viewport with a 4px margin as a final safety net. Arrow is positioned to point at the trigger's horizontal center regardless of alignment.
 - Ink-black background with coin-yellow text (Press Start 2P, 9px, uppercase)
 - 2px ink border + 2px brick-dark offset shadow
-- CSS-triangle arrow pointing down at the trigger
+- CSS-triangle arrow points toward the trigger (down when `side=top`, up when `side=bottom`)
+- Uses `useLayoutEffect` to measure bubble + trigger and pin the bubble to viewport coordinates before paint
 
 ### ColorPicker.tsx
 Color selection with 9 Inkworld-palette presets + custom hex input.

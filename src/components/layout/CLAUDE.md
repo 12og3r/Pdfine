@@ -13,6 +13,7 @@ Brick-wood header bar (56px) with a 4px ink-black bottom border.
 - Back button calls `useUIStore.setDocumentLoaded(false)` to return to landing
 - Zoom buttons enforce MIN_ZOOM/MAX_ZOOM bounds
 - Wired to `useSfx()`: click on navigation, coin+powerUp on export
+- All header Tooltips use `side="bottom"` so they render below the 56px bar instead of clipping above the viewport. The leftmost (Back) and rightmost (Mute) tooltips also use `align="start"` / `align="end"` so their bubbles don't clip past the horizontal edges.
 
 ### PropertyPanel.tsx
 Right sidebar (260px) with cream paper background for editing text properties.

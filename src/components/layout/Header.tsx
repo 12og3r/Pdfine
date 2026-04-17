@@ -69,7 +69,7 @@ export function Header({ editorCore }: HeaderProps) {
     >
       {/* Left: Back + File name */}
       <div className="flex items-center" style={{ minWidth: '220px', gap: '10px' }}>
-        <Tooltip content="Back to home">
+        <Tooltip content="Back to home" side="bottom" align="start">
           <button
             aria-label="Back to home"
             style={iconBtnStyle(false)}
@@ -131,7 +131,7 @@ export function Header({ editorCore }: HeaderProps) {
             border: '3px solid var(--ink-black)',
           }}
         >
-          <Tooltip content="Zoom out">
+          <Tooltip content="Zoom out" side="bottom">
             <button
               aria-label="Zoom out"
               style={{
@@ -171,7 +171,7 @@ export function Header({ editorCore }: HeaderProps) {
           >
             {Math.round(zoom * 100)}%
           </span>
-          <Tooltip content="Zoom in">
+          <Tooltip content="Zoom in" side="bottom">
             <button
               aria-label="Zoom in"
               style={{
@@ -207,7 +207,7 @@ export function Header({ editorCore }: HeaderProps) {
         className="flex items-center"
         style={{ minWidth: '220px', justifyContent: 'flex-end', gap: '12px' }}
       >
-        <Tooltip content={muted ? 'Unmute SFX' : 'Mute SFX'}>
+        <Tooltip content={muted ? 'Unmute SFX' : 'Mute SFX'} side="bottom" align="end">
           <button
             aria-label={muted ? 'Unmute SFX' : 'Mute SFX'}
             style={iconBtnStyle(false)}
