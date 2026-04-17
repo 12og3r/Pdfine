@@ -8,6 +8,7 @@ Core React UI components for the visual PDF editor — canvas rendering, user in
 ### EditorCanvas.tsx
 Main container managing the canvas element and viewport. Handles all mouse/wheel interactions and delegates to EditorCore.
 - Uses `editor-canvas-bg` CSS class: muted sky-green background (#E6F4E4) with a very faint 16×16 pixel grid (6% opacity). The grid decorates but never competes with PDF content — the rendered PDF itself is untouched by the Inkworld theme.
+- **Canvas sanctuary-zone CSS reset**: the `<canvas>` element sets `imageRendering: auto`, `WebkitFontSmoothing: subpixel-antialiased`, `MozOsxFontSmoothing: auto`, `fontSmooth: auto` inline. The Inkworld globals on `html, body, #root` (`-webkit-font-smoothing: none`, `font-smooth: never`, `image-rendering: pixelated`) otherwise cascade to the canvas, which makes `ctx.fillText` draw without anti-aliasing. pdfjs rasters to an offscreen canvas that doesn't inherit any CSS, so its text keeps normal grayscale AA — without this reset, entering edit mode (which swaps pdfjs raster for TextRenderer's canvas redraw) causes a visible stroke-weight jump on body text.
 - Manages HTMLCanvasElement with devicePixelRatio scaling (critical for HiDPI)
 - ResizeObserver updates viewport on container resize
 - Zoom via Ctrl/Cmd+Wheel, clamped to MIN_ZOOM/MAX_ZOOM

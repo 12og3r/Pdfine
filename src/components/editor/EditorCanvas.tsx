@@ -143,7 +143,20 @@ export function EditorCanvas({ editorCore }: EditorCanvasProps) {
       <div style={{ width: scrollSize.width, height: scrollSize.height }}>
         <canvas
           ref={canvasRef}
-          style={{ position: 'sticky', top: 0, left: 0, display: 'block' }}
+          style={{
+            position: 'sticky',
+            top: 0,
+            left: 0,
+            display: 'block',
+            // Sanctuary zone: undo the Inkworld pixel-art theme on the PDF canvas
+            // so Canvas fillText renders with anti-aliasing — matching pdfjs's
+            // offscreen raster and preventing a visible stroke-weight jump when
+            // edit mode swaps in the canvas re-render.
+            imageRendering: 'auto',
+            WebkitFontSmoothing: 'subpixel-antialiased',
+            MozOsxFontSmoothing: 'auto',
+            fontSmooth: 'auto',
+          } as React.CSSProperties}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
