@@ -61,7 +61,10 @@ export interface IEditorCore {
 
   // Export
   validateForExport(): ExportValidation;
-  exportPdf(onProgress?: (p: number) => void): Promise<Uint8Array>;
+  exportPdf(
+    onProgress?: (p: number) => void,
+    options?: import('./IExportModule').ExportOptions,
+  ): Promise<Uint8Array>;
 
   // Event subscription
   on<K extends keyof EditorEvents>(

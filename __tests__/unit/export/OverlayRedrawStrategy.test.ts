@@ -7,7 +7,7 @@ import {
   createTextStyle,
 } from '../../../src/core/model/DocumentModel'
 import type { TextBlock, PositionedGlyph } from '../../../src/types/document'
-import type { PDFFont, PDFPage } from 'pdf-lib'
+import type { PDFFont, PDFPage } from '@cantoo/pdf-lib'
 
 /**
  * Regression test for the export crash triggered by the color-preservation fix
@@ -136,8 +136,15 @@ describe('OverlayRedrawStrategy per-run glyph grouping', () => {
   let mockPage: PDFPage
   let drawTextCalls: Array<{ char: string; opts: { x: number; y: number; size: number; font: PDFFont; color: unknown } }>
   let embeddedFonts: Map<string, PDFFont>
-  const FONT_A = {} as PDFFont
-  const FONT_B = {} as PDFFont
+  // Mocks that expose `widthOfTextAtSize` — matches the 8 units/char spacing
+  // the glyph layout uses in this test file, so sequential-run positioning
+  // lines up with the next glyph's Canvas x.
+  const FONT_A = {
+    widthOfTextAtSize: (text: string, _size: number) => text.length * 8,
+  } as unknown as PDFFont
+  const FONT_B = {
+    widthOfTextAtSize: (text: string, _size: number) => text.length * 8,
+  } as unknown as PDFFont
 
   beforeEach(() => {
     strategy = new OverlayRedrawStrategy()
@@ -312,5 +319,43 @@ describe('OverlayRedrawStrategy per-run glyph grouping', () => {
     expect(drawTextCalls).toHaveLength(2)
     expect(drawTextCalls[0].char).toBe('AB')
     expect(drawTextCalls[1].char).toBe('C')
+  })
+
+  it('positions subsequent runs sequentially by drawn width, not Canvas glyph.x', () => {
+    // Regression for "whitespace before the recolored segment": user applies
+    // a colour change to the middle of a line, splitting one run into three.
+    // The previous strategy anchored each run to its own first glyph's Canvas
+    // x; if the embedded font renders narrower than Canvas measured (common
+    // with Helvetica fallback), the preceding run's drawn text ended before
+    // the next run's anchor and pdf-lib rendered a visible white gap.
+    //
+    // Mock the embedded font as NARROWER than Canvas layout (6 units/char
+    // instead of the 8 implied by glyph.x spacing) — if the strategy still
+    // anchors run 2/3 at Canvas x (8 and 16), we'd see a gap. The fix
+    // advances by pdf-lib's width so run 2 starts where run 1 actually ended.
+    const narrowFont = {
+      widthOfTextAtSize: (text: string, _size: number) => text.length * 6,
+    } as unknown as PDFFont
+    const narrowMap = new Map<string, PDFFont>([['FontA', narrowFont]])
+
+    const glyphs = [
+      glyph('H', 0, { color: { r: 0, g: 0, b: 0, a: 1 } }),
+      glyph('e', 8, { color: { r: 0, g: 0, b: 0, a: 1 } }),
+      glyph('l', 16, { color: { r: 255, g: 0, b: 0, a: 1 } }),
+      glyph('l', 24, { color: { r: 255, g: 0, b: 0, a: 1 } }),
+      glyph('o', 32, { color: { r: 0, g: 0, b: 0, a: 1 } }),
+    ]
+    const block = buildBlock([{ glyphs, baseline: 10 }])
+    strategy.applyBlock(mockPage, block, 792, narrowMap)
+
+    expect(drawTextCalls).toHaveLength(3)
+    // First run "He" anchored to its Canvas x = 0.
+    expect(drawTextCalls[0].opts.x).toBeCloseTo(0, 4)
+    // Red run "ll" must start at pdf-lib's end-of-"He" (0 + 2*6 = 12), NOT at
+    // the Canvas x of the first red glyph (16). A 4-unit gap there would be
+    // a visible white band before the recolored segment.
+    expect(drawTextCalls[1].opts.x).toBeCloseTo(12, 4)
+    // Final "o" follows "ll": 12 + 2*6 = 24 (Canvas would've said 32).
+    expect(drawTextCalls[2].opts.x).toBeCloseTo(24, 4)
   })
 })

@@ -49,6 +49,10 @@ export class EditEngine implements IEditEngine {
     }
 
     this.eventBus.emit('editStart', { blockId });
+    // Emit the initial style so the inspector panel reflects the run the
+    // cursor just landed on. Without this, `styleAtCursor` only fires on the
+    // first cursor movement, leaving the panel in its empty state.
+    this.emitStyleAtCursor();
   }
 
   exitEditMode(): void {
@@ -258,15 +262,33 @@ export class EditEngine implements IEditEngine {
 
   applyStyle(style: Partial<TextStyle>): void {
     if (!this.editing) return;
-    const sel = this.selectionManager.getSelection();
-    if (!sel) return;
 
     const block = this.getEditingBlock();
     if (!block) return;
 
-    // Capture original styles for undo
+    // When the user has a selection, the change scopes to that range.
+    // Otherwise — cursor-only — apply the change to the entire editing block
+    // so clicking Bold / Italic / changing font / size in the inspector has
+    // a visible effect immediately (matching Word / Figma conventions where
+    // style toggles with no selection change the surrounding run's style).
+    const sel = this.selectionManager.getSelection();
+    const cursorPageIdx = this.cursorManager.getPageIdx();
+    const cursorOffset = this.cursorManager.getCharOffset();
+    const pageIdx = sel?.pageIdx ?? (cursorPageIdx >= 0 ? cursorPageIdx : this.findPageForBlock(block.id));
+    if (pageIdx < 0) return;
+
+    const blockTextLength = getTextContent(block).length;
+    const rangeStart = sel ? sel.startOffset : 0;
+    const rangeLength = sel ? sel.endOffset - sel.startOffset : blockTextLength;
+    if (rangeLength <= 0) return;
+
+    // Capture original styles for undo. With no selection we snapshot the
+    // style at the cursor (or offset 0) — any run inside the block is a fine
+    // baseline for undo because CHANGE_STYLE's inverse restores each run's
+    // prior style on a per-run basis.
+    const snapshotOffset = sel ? sel.startOffset : cursorOffset;
     const originalStyle: Partial<TextStyle> = {};
-    const loc = getRunAtOffset(block, sel.startOffset);
+    const loc = getRunAtOffset(block, Math.min(snapshotOffset, Math.max(0, blockTextLength - 1)));
     const run = block.paragraphs[loc.paragraphIdx].runs[loc.runIdx];
     for (const key of Object.keys(style) as Array<keyof TextStyle>) {
       (originalStyle as Record<string, unknown>)[key] = run.style[key];
@@ -274,16 +296,16 @@ export class EditEngine implements IEditEngine {
 
     const cmd: EditCommand = {
       type: 'CHANGE_STYLE',
-      pageIdx: sel.pageIdx,
-      blockId: sel.blockId,
-      offset: sel.startOffset,
-      length: sel.endOffset - sel.startOffset,
+      pageIdx,
+      blockId: block.id,
+      offset: rangeStart,
+      length: rangeLength,
       style,
       originalStyle,
     };
     this.commandHistory.push(cmd);
     this.commandHistory.breakMerge();
-    this.eventBus.emit('textChanged', { pageIdx: sel.pageIdx, blockId: sel.blockId });
+    this.eventBus.emit('textChanged', { pageIdx, blockId: block.id });
     this.emitStyleAtCursor();
   }
 
@@ -447,13 +469,29 @@ export class EditEngine implements IEditEngine {
     this.applyStyle({ fontStyle: newStyle });
   }
 
+  /** Public shim so callers that drive selection (mouse drag) can ask the
+   *  inspector to refresh after changing the selection range. */
+  refreshStyleAtCursor(): void {
+    this.emitStyleAtCursor();
+  }
+
   private emitStyleAtCursor(): void {
     const block = this.getEditingBlock();
     if (!block) {
       this.eventBus.emit('styleAtCursor', { style: null });
       return;
     }
-    const loc = getRunAtOffset(block, this.cursorManager.getCharOffset());
+    // When there's a selection, the inspector should reflect the style of the
+    // selected text (not of the run the cursor happens to sit in). After a
+    // drag-select the cursor ends at the selection's trailing boundary, and
+    // `getRunAtOffset` prefers the start of the *next* run for such boundary
+    // offsets — so reading at the cursor would return the first unselected
+    // run's style and the panel would show the *old* font / weight / size /
+    // colour immediately after applying a change. Read at the selection's
+    // start offset so we always land inside the modified range.
+    const sel = this.selectionManager.getSelection();
+    const readOffset = sel ? sel.startOffset : this.cursorManager.getCharOffset();
+    const loc = getRunAtOffset(block, readOffset);
     const run = block.paragraphs[loc.paragraphIdx]?.runs[loc.runIdx];
     this.eventBus.emit('styleAtCursor', { style: run?.style ?? null });
   }

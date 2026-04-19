@@ -1,7 +1,8 @@
-import { rgb } from 'pdf-lib'
-import type { PDFFont, PDFPage } from 'pdf-lib'
+import { rgb } from '@cantoo/pdf-lib'
+import type { PDFFont, PDFPage } from '@cantoo/pdf-lib'
 import type { PositionedGlyph, TextBlock, TextStyle } from '../../types/document'
 import { CoordinateTransformer } from '../infra/CoordinateTransformer'
+import { fontEmbedKey } from '../font/StandardFonts'
 
 const OVERLAY_PADDING = 2;
 
@@ -68,6 +69,17 @@ export class OverlayRedrawStrategy {
 
         let runGlyphs: PositionedGlyph[] = [];
         let runFont: PDFFont | undefined;
+        // Track the x at which the NEXT run on this line should start, in
+        // layout (Canvas) space. We anchor the FIRST run on each line to its
+        // own Canvas glyph.x (so the line's overall position is preserved),
+        // then advance this cursor after each run by the embedded font's
+        // actual drawn width. Without this, a partial-selection style change
+        // splits the line into several runs that each anchor to their first
+        // glyph's Canvas x — but `pdf-lib.drawText` advances internally by
+        // the embedded font's (possibly Helvetica-fallback) width table, so
+        // the visually drawn run ends BEFORE the next run's anchor,
+        // producing the "whitespace before the recolored segment" symptom.
+        let nextRunLayoutX: number | null = null;
 
         const flushRun = () => {
           if (runGlyphs.length === 0 || !runFont) {
@@ -76,7 +88,10 @@ export class OverlayRedrawStrategy {
             return;
           }
           const first = runGlyphs[0];
-          const layoutX = block.bounds.x + first.x;
+          // First run on the line anchors to its first glyph's Canvas x.
+          // Subsequent runs pick up where the previous run's drawn glyphs
+          // actually ended in pdf-lib space.
+          const layoutX = nextRunLayoutX ?? block.bounds.x + first.x;
           const { px, py } = transformer.layoutToPdf(layoutX, baselineY);
 
           // Color: our `Color` is 0-255 ints (from the pdfjs operator list);
@@ -94,6 +109,18 @@ export class OverlayRedrawStrategy {
             color: rgb(toUnit(r), toUnit(g), toUnit(b)),
           });
 
+          // Advance for the next run. Prefer the embedded font's own
+          // `widthOfTextAtSize` (matches exactly what pdf-lib just drew).
+          // When the font mock under test doesn't expose it, fall back to
+          // the Canvas-measured extent of this run's glyphs.
+          const last = runGlyphs[runGlyphs.length - 1];
+          const canvasExtent = last.x + last.width - first.x;
+          const drawnWidth =
+            typeof runFont.widthOfTextAtSize === 'function'
+              ? runFont.widthOfTextAtSize(runText, first.style.fontSize)
+              : canvasExtent;
+          nextRunLayoutX = layoutX + drawnWidth;
+
           runGlyphs = [];
           runFont = undefined;
         };
@@ -105,7 +132,17 @@ export class OverlayRedrawStrategy {
           // breaks inside a single-line run in the exported PDF.
           if (glyph.char === '\n') continue;
 
-          const font = embeddedFonts.get(glyph.style.fontId);
+          // Look up the PDFFont under the composite key that the embedder
+          // indexed under. For curated standard fonts the key encodes the
+          // weight/italic axis so the correct StandardFonts variant is used;
+          // for other fonts the key degenerates to fontId. Tests that still
+          // populate the map by bare fontId keep working via the fallback.
+          const key = fontEmbedKey(
+            glyph.style.fontId,
+            glyph.style.fontWeight >= 600,
+            glyph.style.fontStyle === 'italic',
+          );
+          const font = embeddedFonts.get(key) ?? embeddedFonts.get(glyph.style.fontId);
           if (!font) {
             // Missing font -> flush whatever we had and skip this glyph.
             flushRun();
@@ -126,6 +163,9 @@ export class OverlayRedrawStrategy {
           }
         }
         flushRun();
+
+        // Next line anchors to its own first glyph.
+        nextRunLayoutX = null;
       }
     }
   }

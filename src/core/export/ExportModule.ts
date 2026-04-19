@@ -1,6 +1,6 @@
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument } from '@cantoo/pdf-lib'
 import type { DocumentModel, ExportValidation, TextBlock } from '../../types/document'
-import type { IExportModule } from '../interfaces/IExportModule'
+import type { ExportOptions, IExportModule } from '../interfaces/IExportModule'
 import type { IFontManager } from '../interfaces/IFontManager'
 import { ExportValidator } from './ExportValidator'
 import { FontEmbedder } from './FontEmbedder'
@@ -20,9 +20,16 @@ export class ExportModule implements IExportModule {
     model: DocumentModel,
     fontManager: IFontManager,
     onProgress?: (progress: number) => void,
-    modifiedBlockIds?: Set<string>
+    modifiedBlockIds?: Set<string>,
+    options?: ExportOptions,
   ): Promise<Uint8Array> {
-    const pdfDoc = await PDFDocument.load(originalPdf);
+    // If the source PDF was encrypted, pdfjs already accepted the password
+    // in the editor — pdf-lib needs the same password here or `load()` will
+    // throw "Input document to PDFDocument.load is encrypted".
+    const pdfDoc = await PDFDocument.load(
+      originalPdf,
+      options?.sourcePassword ? { password: options.sourcePassword } : undefined,
+    );
     const pages = pdfDoc.getPages();
 
     const embeddedFonts = await this.fontEmbedder.embedAllUsedFonts(
@@ -60,6 +67,19 @@ export class ExportModule implements IExportModule {
       onProgress?.(completed / totalSteps);
     }
 
-    return pdfDoc.save() as Promise<Uint8Array>;
+    // Optional password-protection. `@cantoo/pdf-lib` wires in
+    // `pdfDoc.encrypt(options)` which installs a PDF V4/V5 `/Encrypt`
+    // dictionary; subsequent `save()` emits the strings/streams encrypted.
+    // The user-password and owner-password are intentionally the same — the
+    // recipient only needs one secret to open the document. Per-permission
+    // control (printing / copying / annotation) can be layered on later.
+    if (options?.password && options.password.length > 0) {
+      pdfDoc.encrypt({
+        userPassword: options.password,
+        ownerPassword: options.password,
+      });
+    }
+
+    return (await pdfDoc.save()) as Uint8Array;
   }
 }

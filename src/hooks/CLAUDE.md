@@ -14,12 +14,8 @@ Initializes EditorCore singleton and syncs editor events to UIStore.
 - Cleanup: unsubscribes all events + calls `editorCore.destroy()` on unmount
 - Returns `IEditorCore` instance
 
-### useExportPdf.ts
-PDF export workflow with progress tracking.
-- Validates before export, shows confirmation if warnings exist
-- Calls `editorCore.exportPdf(onProgress)` with progress callback
-- Triggers browser download: `{originalName}_edited.pdf`
-- Returns `{ exportPdf, isExporting, progress }`
+### useExportPdf.ts — REMOVED
+The export workflow now lives in `components/export/ExportDialog.tsx`, which opens a Paper-styled modal (driven by `uiStore.showExportDialog`) with filename input + validation checks + Cancel/Export actions. The dialog calls `editorCore.exportPdf` directly and handles the browser download + isExporting / exportProgress store updates itself.
 
 ### useSfx.ts
 Inkworld 8-bit sound effects — synthesized at call time via `AudioContext` oscillators. No audio files shipped.

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Lock } from 'lucide-react'
 import { Modal } from '../ui/Modal'
-import { Button } from '../ui/Button'
 import { useUIStore } from '../../store/uiStore'
 import type { IEditorCore } from '../../core/interfaces/IEditorCore'
 
@@ -50,85 +49,78 @@ export function PasswordModal({ editorCore }: PasswordModalProps) {
   }
 
   return (
-    <Modal open title="Password Required" onClose={handleClose}>
+    <Modal open title="Unlock this document." eyebrow="Password required" onClose={handleClose}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          marginBottom: '18px',
+          gap: 12,
+          marginBottom: 18,
           padding: '12px 14px',
-          background: 'var(--ink-paper-dark)',
-          border: '3px solid var(--ink-black)',
+          background: 'var(--p-accent-2)',
+          border: '1px solid var(--p-accent)',
         }}
       >
         <div
           style={{
-            width: '36px',
-            height: '36px',
+            width: 32,
+            height: 32,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'var(--ink-brick)',
-            border: '3px solid var(--ink-black)',
+            background: 'var(--p-accent)',
+            color: 'var(--p-paper)',
             flexShrink: 0,
           }}
         >
-          <Lock className="w-4 h-4" style={{ color: 'var(--ink-paper)' }} />
+          <Lock size={16} />
         </div>
-        <p
-          style={{
-            color: 'var(--ink-black)',
-            fontFamily: 'var(--font-pixel-body)',
-            fontSize: '14px',
-            lineHeight: 1.4,
-          }}
-        >
-          This PDF is locked. Enter the password to continue.
+        <p style={{ color: 'var(--p-ink-2)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
+          This PDF is encrypted. Enter the password to decrypt and edit it — the password is not
+          stored.
         </p>
       </div>
 
+      <label className="paper-eyebrow" style={{ display: 'block', marginBottom: 6 }}>
+        Password
+      </label>
       <input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="ENTER PASSWORD"
-        className="w-full focus:outline-none"
-        style={{
-          padding: '12px 14px',
-          fontFamily: 'var(--font-display)',
-          fontSize: '11px',
-          letterSpacing: '0.05em',
-          color: 'var(--ink-black)',
-          background: 'var(--ink-cloud)',
-          border: '3px solid var(--ink-black)',
-          boxShadow: '3px 3px 0 0 var(--ink-black)',
-        }}
+        className="paper-input"
+        style={{ fontFamily: 'var(--pdfine-mono)' }}
         autoFocus
       />
 
       {error && (
         <p
           style={{
-            marginTop: '12px',
-            fontFamily: 'var(--font-pixel-body)',
-            fontSize: '13px',
-            color: 'var(--ink-danger)',
-            fontWeight: 700,
+            marginTop: 10,
+            fontFamily: 'var(--pdfine-mono)',
+            fontSize: 12,
+            color: 'var(--p-warm)',
+            letterSpacing: '0.04em',
           }}
         >
           ⚠ {error}
         </p>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
-        <Button variant="secondary" onClick={handleClose}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+        <button type="button" className="paper-btn paper-btn-ghost" onClick={handleClose}>
           Cancel
-        </Button>
-        <Button variant="primary" onClick={handleUnlock} disabled={loading || !password}>
-          {loading ? 'Unlocking...' : 'Unlock'}
-        </Button>
+        </button>
+        <button
+          type="button"
+          className="paper-btn"
+          onClick={handleUnlock}
+          disabled={loading || !password}
+          style={{ opacity: loading || !password ? 0.6 : 1 }}
+        >
+          {loading ? 'Unlocking…' : 'Unlock'}
+        </button>
       </div>
     </Modal>
   )

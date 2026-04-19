@@ -19,14 +19,17 @@ export const MAX_ZOOM = 5.0;
 export const ZOOM_STEP = 0.1;
 export const DEFAULT_ZOOM = 1.0;
 
-// Rendering
+// Rendering — Paper editorial palette
 export const CURSOR_BLINK_INTERVAL_MS = 530;
-export const SELECTION_COLOR = 'rgba(99, 102, 241, 0.3)';
-export const CURSOR_COLOR = '#1F2937';
-export const EDIT_BORDER_COLOR = '#6366F1';
-export const OVERFLOW_BORDER_COLOR = '#F59E0B';
-export const TEXT_HOVER_BG_COLOR = 'rgba(99, 102, 241, 0.08)';
-export const TEXT_EDITING_BG_COLOR = 'rgba(99, 102, 241, 0.12)';
+export const SELECTION_COLOR = 'rgba(47, 90, 63, 0.25)';
+export const CURSOR_COLOR = '#221C15';
+export const EDIT_BORDER_COLOR = '#221C15';
+export const OVERFLOW_BORDER_COLOR = '#B85C3A';
+export const TEXT_HOVER_BG_COLOR = 'rgba(47, 90, 63, 0.08)';
+export const TEXT_EDITING_BG_COLOR = 'rgba(47, 90, 63, 0.10)';
+export const EDIT_TAG_BG_COLOR = '#221C15';
+export const EDIT_TAG_FG_COLOR = '#F7F1E1';
+export const OVERFLOW_TAG_BG_COLOR = '#B85C3A';
 
 // Page layout
 export const PAGE_GAP = 20;

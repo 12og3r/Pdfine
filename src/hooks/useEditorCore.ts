@@ -32,10 +32,15 @@ export function useEditorCore(): IEditorCore {
     unsubs.push(
       editorCore.on('overflow', ({ blockId, state }) => {
         const current = useUIStore.getState().overflowWarnings
+        let next = current
         if (state.status === 'overflowing' && !current.includes(blockId)) {
-          store.setOverflowWarnings([...current, blockId])
+          next = [...current, blockId]
         } else if (state.status === 'normal') {
-          store.setOverflowWarnings(current.filter((id) => id !== blockId))
+          next = current.filter((id) => id !== blockId)
+        }
+        if (next !== current) {
+          store.setOverflowWarnings(next)
+          editorCore.getRenderEngine().setOverflowBlockIds(next)
         }
       })
     )
@@ -52,16 +57,35 @@ export function useEditorCore(): IEditorCore {
       })
     )
 
+    const syncBlockBounds = (pageIdx: number, blockId: string) => {
+      const page = editorCore.getPageModel(pageIdx)
+      if (!page) return
+      const el = page.elements.find((e) => e.type === 'text' && e.id === blockId)
+      if (!el) return
+      store.setCurrentBlockBounds({ ...el.bounds })
+    }
+
     unsubs.push(
       editorCore.on('editStart', ({ blockId }) => {
         store.setSelectedBlockId(blockId)
         store.setIsEditing(true)
+        syncBlockBounds(editorCore.getCurrentPage(), blockId)
       })
     )
 
     unsubs.push(
       editorCore.on('editEnd', () => {
         store.setIsEditing(false)
+        store.setCurrentBlockBounds(null)
+      })
+    )
+
+    unsubs.push(
+      editorCore.on('textChanged', ({ pageIdx, blockId }) => {
+        // Reflow may have expanded the block — refresh the inspector's
+        // "Block bounds" readout so x/y/w/h stay in sync with what's on the
+        // canvas.
+        syncBlockBounds(pageIdx, blockId)
       })
     )
 

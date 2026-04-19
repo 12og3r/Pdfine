@@ -169,57 +169,43 @@ Never skip steps. A bug fix without a reproducing test is incomplete.
 - `MIN_ZOOM = 0.25`, `MAX_ZOOM = 5.0`
 - `CURSOR_BLINK_INTERVAL_MS = 530`
 
-## Design System — "Inkworld" (MUST FOLLOW)
+## Design System — "Paper" (MUST FOLLOW)
 
-All frontend UI uses the **Inkworld** design system defined in `src/index.css`. A SNES-era pixel-art theme that pays homage to classic side-scrollers. Full spec: `docs/superpowers/specs/2026-04-11-inkworld-pixel-theme-design.md`.
+All frontend UI uses the **Paper** design system defined in `src/index.css`. An editorial, warm ivory theme evoking a well-used literary magazine — Newsreader serif display, multi-hue accents (forest green, terracotta, mustard, plum), hairline ink borders, and generous white space. The original Inkworld pixel theme was retired but its CSS tokens remain in `index.css` for fallback (`--ink-*` variables). New code should target Paper tokens exclusively.
 
 ### Core Principles
-- **Pixel aesthetic**: Every visible UI element has a 1–3px `#2B2B54` (ink-black) outline. No rounded corners. No soft shadows — use hard offset shadows like `4px 4px 0 0 var(--ink-black)`.
-- **Image rendering**: `image-rendering: pixelated`, `font-smooth: never`, `-webkit-font-smoothing: none` globally.
-- **Stepped animations**: All keyframe animations use `steps(N)` timing for a frame-based feel.
+- **Editorial feel**: hairline 1px borders in `var(--p-line)` (14% ink). Radii between 0 and 2px. No hard offset shadows — only soft drop shadows (`0 30px 80px -30px rgba(0,0,0,…)`) on modals and hero cards.
+- **Typography hierarchy**: Newsreader serif (display + italic accents), Inter (body copy), JetBrains Mono (eyebrows, metrics, data labels). Eyebrows are always uppercase with 0.1–0.16em tracking.
+- **Smoothed text**: `-webkit-font-smoothing: antialiased`, `text-rendering: optimizeLegibility`. No pixel rendering globally.
 - **Sanctuary zone**: The PDF rendering canvas itself is **never** themed. Edited PDF content keeps its original typography — this is the product's core promise.
 
-### Landing Page (Sky + Paper)
-- **Background**: Bright sky `var(--bg)` (#5FCDE4) with drifting pixel clouds
-- **Text**: Ink hierarchy — `var(--text-primary)` (#2B2B54), `--text-secondary` (#4A2810), `--text-muted` (#8C4B1D)
-- **Accent**: Coin `var(--accent)` (#FFE045) → Brick `var(--accent-secondary)` (#D17F44)
-- **Cards/Surfaces**: Cream paper `var(--ink-paper)` (#FFF3C4) with ink-black outlines
-- **Display title**: Press Start 2P + 8-direction hard drop-shadow (see `.gradient-text` class)
+### Landing Page (Warm Ivory)
+- **Background**: `var(--p-bg)` (#EFE8D9) warm ivory, plus a subtle SVG paper grain + forest/celadon radial washes.
+- **Text**: `var(--p-ink)` (#221C15) primary, `--p-ink-2` / `--p-ink-3` / `--p-ink-4` for secondary/tertiary.
+- **Accents**: `--p-accent` (#2F5A3F forest), `--p-warm` (#B85C3A terracotta), `--p-gold` (#C69545 mustard), `--p-plum` (#6B4266).
+- **Cards/Surfaces**: Cream paper `var(--p-paper)` (#F7F1E1) with 1px `var(--p-line)` outlines.
+- **Display title**: Newsreader regular at `clamp(48px, 7vw, 104px)`, italic spans for accents.
 
-### Editor (Brick/Wood Chrome)
-- **Chrome** (header, panels): `var(--chrome)` (#4A2810) deep brick-brown
-- **Text on dark**: `var(--chrome-text)` (#FFF3C4 cream), `--chrome-text-muted` (#F5DFA0)
-- **Active tool**: coin-yellow background with inset shadow (pressed-in look)
-- **Canvas background**: `.editor-canvas-bg` — very faint pixel grid (2px) on muted sky-green (#E6F4E4)
-- **Property panel**: Cream paper background (left-border 4px ink-black)
-- **Mascot**: Inky appears bottom-left corner in idle + autoFidget mode
+### Editor (Paper Chrome)
+- **Chrome**: 64px ivory topbar with a `var(--p-line)` underline. Dark ink `.paper-btn` for the primary export action.
+- **Properties panel**: cream paper background (`--p-paper`), 300px, hairline left border. ink-filled toggle buttons with `--p-paper` text on active.
+- **Canvas background**: `var(--p-bg-2)` soft parchment, centered document sheet with gentle drop shadow. No background grid.
+- **Page navigator**: floating paper pill, soft shadow.
 
 ### Shared
 - **Typography**:
-  - `var(--font-display)` — **Press Start 2P** (headings, buttons, tabs). Always uppercase letters, `letterSpacing: 0.05em`.
-  - `var(--font-pixel-body)` — **DotGothic16** / Silkscreen (body copy, including CJK)
-  - `var(--font-sans)` — Silkscreen (short labels)
-  - `var(--font-mono)` — JetBrains Mono (unchanged, for code)
-- **Shadows** (hard, no blur):
-  - `--shadow-xs` (2px), `--shadow-sm` (3px), `--shadow-md` (4px), `--shadow-lg` (6px), `--shadow-xl` (8px)
-  - Direction is always bottom-right, color is always `#2B2B54`
-- **Pixel utility classes** (use these in new components): `.pixel-btn`, `.pixel-card`, `.pixel-border`, `.pixel-border-thick`, `.pixel-cloud`, `.pixel-brick`, `.pixel-pipe`, `.pixel-question-block`, `.pixel-coin`, `.pixel-font-display`, `.pixel-font-body`
-- **Animations**: stepped keyframes (`steps(4)`, `steps(6)`, `steps(8)`) for a frame-based feel. All respect `prefers-reduced-motion`.
-- **Spacing**: Inline `style={{}}` for padding/margins to avoid Tailwind v4 reset conflicts
-- **Accessibility**: WCAG 2.1 AA. ARIA attributes, keyboard nav, focus management. Focus ring uses 3px coin-yellow outline.
-- **Interactions**: Hover = shift `translate(-2px, -2px)` + larger offset shadow. Active = press `translate(2px, 2px)` + smaller offset shadow.
-- Never use raw Tailwind color classes — use CSS variables or raw hex values from the Inkworld palette.
+  - `var(--p-serif)` — **Newsreader** (headings, display, italic accents).
+  - `var(--p-sans)` — **Inter** (body, UI labels). This replaces the previous Silkscreen/DotGothic16.
+  - `var(--pdfine-mono)` — **JetBrains Mono** (eyebrows, figure tags, metric labels).
+  - Legacy `var(--font-display|sans|pixel-body|mono)` tokens still resolve and are mapped to the pixel stack for any retained component.
+- **Paper utility classes** (use these in new components): `.paper-theme` (root scope carrying tokens and grain), `.paper-btn`, `.paper-btn-ghost`, `.paper-btn-warm`, `.paper-input`, `.paper-eyebrow`, `.paper-caret`.
+- **Spacing**: Inline `style={{}}` for padding/margins to avoid Tailwind v4 reset conflicts.
+- **Accessibility**: WCAG 2.1 AA. ARIA attributes, keyboard nav, focus management.
+- **Interactions**: hover lifts lightly (`translateY(-1px)`) with a warmer shadow; active returns to base.
+- Never use raw Tailwind color classes — use CSS variables.
 
-### Mascot — Inky
-- Import from `components/mascot`: `import { Inky } from '../mascot'`
-- Props: `action`, `size` (integer multiplier), `direction`, `autoFidget`, `className`, `onClick`
-- Appears in: landing Hero, landing UploadWidget (loading state), mobile warning, editor bottom-left corner, confused state on errors
-- Never blocks interaction. Never gates flow. Always purely decorative reactions to real events.
-
-### Audio — 8-bit SFX
-- `src/hooks/useSfx.ts` — WebAudio synth, no audio files. 5 sounds: `click`, `coin`, `jump`, `error`, `powerUp`
-- Mute toggle in editor Header. State persists in `localStorage` under `pdfine-muted`.
-- Wire sound effects to existing events, not fabricated ones — every beep should correspond to a real user action.
+### Retired decorations
+- The Inky mascot (`components/mascot/`) and 8-bit SFX (`hooks/useSfx.ts`) are no longer wired into the UI. Files remain for historical reference but should not be imported by new code. The editor, landing, and mobile warning no longer render them.
 
 ## Known Limitations
 

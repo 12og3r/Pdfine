@@ -8,15 +8,15 @@ Global UI state management via Zustand. Contains ONLY UI/presentation state — 
 ### uiStore.ts
 Single Zustand store with `create<UIState>()` pattern.
 
-**State** (17 properties):
+**State** (18 properties):
 - Tool & viewport: `activeTool`, `zoom`, `currentPage`, `totalPages`
 - Document: `documentLoaded`, `showPasswordModal`, `pendingPdfData`, `fileName`
-- Selection & editing: `selectedBlockId`, `currentTextStyle`, `overflowWarnings`, `isEditing`
+- Selection & editing: `selectedBlockId`, `currentTextStyle`, `overflowWarnings`, `isEditing`, `editFocusTick`
 - History: `canUndo`, `canRedo`
 - Export: `isExporting`, `exportProgress`
 - UI: `propertyPanelOpen`
 
-**Actions**: 14 setter methods (one per mutable property).
+**Actions**: 14 setters + `requestEditFocus()`, which increments `editFocusTick` so `TextEditInput` re-focuses the hidden textarea. Panel interactions that can steal focus from the textarea (color picker, font dropdown, size input) call `requestEditFocus` after applying their mutation so the user can keep typing.
 
 ## Why DocumentModel is NOT Here
 1. EditorCore owns the document model directly (private property)

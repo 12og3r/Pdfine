@@ -43,10 +43,16 @@ export class EditorCore implements IEditorCore {
 
   private documentModel: DocumentModel | null = null
   private originalPdfData: ArrayBuffer | null = null
+  /** Password the user supplied to unlock the source PDF (if any). Retained
+   *  so the export path can hand it to pdf-lib's `PDFDocument.load({ password })`
+   *  — otherwise loading an encrypted source PDF into pdf-lib throws even
+   *  after pdfjs has accepted the password in the editor. */
+  private openPassword: string | null = null
   private modifiedBlockIds = new Set<string>()
   private currentPage = 0
   private activeTool: ActiveTool = 'select'
   private viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0, width: 800, height: 600 }
+  private dragAnchor: { blockId: string; offset: number } | null = null
 
   constructor() {
     // Set up re-render callback for async PDF page rendering
@@ -57,14 +63,24 @@ export class EditorCore implements IEditorCore {
 
   async loadPdf(data: ArrayBuffer, password?: string): Promise<void> {
     logger.info('Loading PDF...')
-    // Store a copy because pdfjs may transfer/detach the original ArrayBuffer
+    // pdfjs may transfer / detach the ArrayBuffer we hand to its worker.
+    // Previously we sliced `data` for our own keep-copy and then passed the
+    // caller's `data` straight through to pdfjs — but that detaches the
+    // caller's buffer, so a retry (e.g. wrong-password → correct-password
+    // flow where `PasswordModal` re-submits the same `pendingPdfData`)
+    // would then fail at the top of this method with "Cannot perform
+    // ArrayBuffer.prototype.slice on a detached ArrayBuffer". Copy TWICE
+    // up-front: one copy we persist for export, one copy we hand to pdfjs.
+    // The caller's `data` is never touched.
     this.originalPdfData = data.slice(0)
+    this.openPassword = password ?? null
+    const workerData = data.slice(0)
 
     // Re-set re-render callback (may have been cleared by destroy() in React strict mode)
     this.renderEngine.setRerenderCallback(() => this.render())
 
     // Parse PDF
-    this.documentModel = await this.pdfParser.parse(data, password)
+    this.documentModel = await this.pdfParser.parse(workerData, password)
 
     // Get the pdfjs document proxy for page rendering
     const pdfDoc = (this.documentModel as DocumentModel & { _pdfDoc?: pdfjsLib.PDFDocumentProxy })._pdfDoc
@@ -283,6 +299,11 @@ export class EditorCore implements IEditorCore {
           const cursorMgr = (this.editEngine as EditEngine).getCursorManager()
           cursorMgr.setCursor(this.currentPage, hit.blockId, hit.charOffset)
           this.editEngine.getSelectionManager().clearSelection()
+          // Remember the down-click point as the drag anchor so a subsequent
+          // mousemove can extend the selection.
+          this.dragAnchor = { blockId: hit.blockId, offset: hit.charOffset }
+          // Refresh the inspector to reflect the run the cursor just landed on.
+          ;(this.editEngine as EditEngine).refreshStyleAtCursor()
           this.render()
         }
       } else {
@@ -290,6 +311,7 @@ export class EditorCore implements IEditorCore {
           this.editEngine.exitEditMode()
           this.render()
         }
+        this.dragAnchor = null
         this.eventBus.emit('selectionChanged', null)
       }
     } else if (this.activeTool === 'addText') {
@@ -314,6 +336,33 @@ export class EditorCore implements IEditorCore {
 
     const hit = this.renderEngine.hitTest(x, y, this.currentPage)
 
+    // Drag-extend selection while a drag is active inside the editing block.
+    if (
+      this.dragAnchor &&
+      this.editEngine?.isEditing() &&
+      this.editEngine.getEditingBlockId() === this.dragAnchor.blockId &&
+      hit &&
+      hit.elementType === 'text' &&
+      hit.blockId === this.dragAnchor.blockId
+    ) {
+      const cursorMgr = (this.editEngine as EditEngine).getCursorManager()
+      const selMgr = this.editEngine.getSelectionManager()
+      const anchor = this.dragAnchor.offset
+      const cursor = hit.charOffset
+      cursorMgr.setCursor(this.currentPage, this.dragAnchor.blockId, cursor)
+      if (anchor === cursor) {
+        selMgr.clearSelection()
+      } else {
+        selMgr.setSelection(this.currentPage, this.dragAnchor.blockId, anchor, cursor)
+      }
+      // Let the inspector reflect the styles of whatever is currently under
+      // the selection — otherwise it stays stuck on the previous range.
+      ;(this.editEngine as EditEngine).refreshStyleAtCursor()
+      canvas.style.cursor = 'text'
+      this.render()
+      return
+    }
+
     if (hit && hit.elementType === 'text') {
       const page = this.documentModel.pages[this.currentPage]
       const el = page?.elements.find(e => e.id === hit.blockId)
@@ -334,7 +383,7 @@ export class EditorCore implements IEditorCore {
   }
 
   handleCanvasMouseUp(_e: MouseEvent): void {
-    // TODO: Handle drag end
+    this.dragAnchor = null
   }
 
   handleCanvasDoubleClick(e: MouseEvent): void {
@@ -467,7 +516,10 @@ export class EditorCore implements IEditorCore {
     return this.exportModule.validate(this.documentModel, this.fontManager, this.modifiedBlockIds)
   }
 
-  async exportPdf(onProgress?: (p: number) => void): Promise<Uint8Array> {
+  async exportPdf(
+    onProgress?: (p: number) => void,
+    options?: import('./interfaces/IExportModule').ExportOptions,
+  ): Promise<Uint8Array> {
     if (!this.documentModel || !this.originalPdfData) {
       throw new Error('No document loaded')
     }
@@ -481,12 +533,19 @@ export class EditorCore implements IEditorCore {
     // Swapping to knuth-plass + calling `reflowPage` here would discard that
     // layout and produce different line breaks than what the user just saw,
     // so the exported PDF would not match the editor — WYSIWYG-breaking.
+    // Thread the source PDF's open-password so pdf-lib can decrypt it — the
+    // caller only passes the output-encryption password via `options.password`.
+    const resolved: import('./interfaces/IExportModule').ExportOptions = {
+      ...options,
+      sourcePassword: options?.sourcePassword ?? this.openPassword ?? undefined,
+    }
     return await this.exportModule.export(
       this.originalPdfData,
       this.documentModel,
       this.fontManager,
       onProgress,
-      this.modifiedBlockIds
+      this.modifiedBlockIds,
+      resolved,
     )
   }
 
@@ -600,6 +659,7 @@ export class EditorCore implements IEditorCore {
     })
 
     this.eventBus.on('cursorMoved', () => {
+      this.renderEngine.resetCursorBlink()
       this.render()
     })
 

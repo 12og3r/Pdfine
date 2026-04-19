@@ -1,7 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useUIStore } from '../../store/uiStore'
 import type { IEditorCore } from '../../core/interfaces/IEditorCore'
-import { useSfx } from '../../hooks/useSfx'
 
 interface PageNavigatorProps {
   editorCore: IEditorCore
@@ -10,7 +9,6 @@ interface PageNavigatorProps {
 export function PageNavigator({ editorCore }: PageNavigatorProps) {
   const currentPage = useUIStore((s) => s.currentPage)
   const totalPages = useUIStore((s) => s.totalPages)
-  const { play } = useSfx()
 
   if (totalPages <= 1) return null
 
@@ -19,7 +17,6 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       const next = currentPage - 1
       useUIStore.getState().setCurrentPage(next)
       editorCore.setCurrentPage(next)
-      play('click')
     }
   }
 
@@ -28,21 +25,21 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       const next = currentPage + 1
       useUIStore.getState().setCurrentPage(next)
       editorCore.setCurrentPage(next)
-      play('click')
     }
   }
 
   const navBtnStyle = (disabled: boolean): React.CSSProperties => ({
-    width: '36px',
-    height: '36px',
+    width: 36,
+    height: 36,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: disabled ? 'var(--ink-brick-deep)' : 'var(--ink-brick-dark)',
-    color: disabled ? 'var(--text-ghost)' : 'var(--ink-coin)',
+    background: 'transparent',
+    color: disabled ? 'var(--p-ink-4)' : 'var(--p-ink-2)',
     border: 'none',
     cursor: disabled ? 'default' : 'pointer',
-    opacity: disabled ? 0.4 : 1,
+    opacity: disabled ? 0.5 : 1,
+    transition: 'background 150ms, color 150ms',
   })
 
   return (
@@ -50,29 +47,27 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        background: 'var(--ink-brick-deep)',
-        border: '3px solid var(--ink-black)',
-        boxShadow: '4px 4px 0 0 var(--ink-black)',
+        background: 'var(--p-paper)',
+        border: '1px solid var(--p-line)',
+        borderRadius: 2,
+        boxShadow: '0 12px 30px -15px rgba(0,0,0,0.18)',
       }}
     >
       <button
         aria-label="Previous page"
-        style={{
-          ...navBtnStyle(currentPage === 0),
-          borderRight: '2px solid var(--ink-black)',
-        }}
+        style={{ ...navBtnStyle(currentPage === 0), borderRight: '1px solid var(--p-line)' }}
         onClick={handlePrev}
         disabled={currentPage === 0}
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft size={16} />
       </button>
       <span
         className="tabular-nums select-none"
         style={{
-          color: 'var(--ink-coin)',
-          fontFamily: 'var(--font-display)',
-          fontSize: '10px',
-          padding: '0 12px',
+          color: 'var(--p-ink)',
+          fontFamily: 'var(--pdfine-mono)',
+          fontSize: 12,
+          padding: '0 14px',
           minWidth: '4rem',
           textAlign: 'center',
         }}
@@ -81,14 +76,11 @@ export function PageNavigator({ editorCore }: PageNavigatorProps) {
       </span>
       <button
         aria-label="Next page"
-        style={{
-          ...navBtnStyle(currentPage >= totalPages - 1),
-          borderLeft: '2px solid var(--ink-black)',
-        }}
+        style={{ ...navBtnStyle(currentPage >= totalPages - 1), borderLeft: '1px solid var(--p-line)' }}
         onClick={handleNext}
         disabled={currentPage >= totalPages - 1}
       >
-        <ChevronRight className="w-4 h-4" />
+        <ChevronRight size={16} />
       </button>
     </div>
   )

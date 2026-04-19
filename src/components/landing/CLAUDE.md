@@ -1,75 +1,47 @@
 # components/landing
 
 ## Purpose
-Landing page components for the PDF editor — the first thing users see before loading a document. **Inkworld** pixel-art theme: bright sky background with drifting pixel clouds, cream paper cards with ink-black outlines, chunky coin-yellow CTAs, and Inky the mascot.
+Editorial "Paper" landing surface: a warm ivory paper world with a Newsreader serif display, multi-hue accents (forest green / terracotta / mustard), and hard-cornered paper cards. This is the user's first impression before a document is loaded. Inkworld pixel styling was retired in favor of this editorial direction.
 
 ## Files
 
 ### LandingPage.tsx
-Main landing page layout. Orchestrates all sub-components.
-- `lumen-bg noise-bg` wrapper (still named `lumen-bg` for CSS compat; the class now paints a SNES sky gradient)
-- Document-level `dragover`/`drop` listeners to prevent browser default file opening
-- Error display: red pixel pill with hard ink-black border + 3px offset shadow
-- Sections: Nav → Hero → UploadWidget → TrustSignals → FeatureCards → HowItWorks → Footer
-- Nav: pixel coin logo (P inside a yellow question block) + `pixel-btn pixel-btn-ghost` GitHub button
+Top-level landing orchestrator. Holds a local `page: 'landing' | 'privacy'` switch so the Privacy deep-dive can live in the same pre-document-loaded surface. Wraps everything in a `.paper-theme` root and wires `<PaperHero/>` → `<PaperBento/>` → `<PaperPrivacyTeaser/>`. Receives `editorCore` and passes it to `UploadWidget`. Adds document-level `dragover`/`drop` suppression so stray files don't navigate away.
 
-### Hero.tsx
-Two-column hero — big pixel title + mascot on the right.
-- Pixel clouds floating in the background (`.pixel-cloud` class)
-- "Coin badge" at top: pixel-spinning coin + "100% CLIENT-SIDE" in Press Start 2P
-- Giant title: `EDIT PDFS / LIKE A HERO` with 8-direction hard drop shadow + brick shadow
-- Subtitle inside a cream paper pill with 3px ink-black border
-- Right column: `<Inky action="idle" size={7} autoFidget />` atop a tiny pixel grass tuft
+### PaperTopBar.tsx
+Sticky topbar (serif wordmark, mini "Pdfine" mark, v1.0 mono eyebrow, Features/Github nav). Brand click returns to the landing view. Exports `PaperMark` — a 26px paper sheet + green coin SVG — reused by `Header` in the editor and by the mobile warning.
+
+### PaperHero.tsx
+Pill ("Privacy is the feature · READ MORE") + giant Newsreader headline ("Edit PDFs, / on your own machine.") + centered upload slot + an editorial "Scroll · Capabilities below" hint. The headline colors "on your own" forest green and "machine" terracotta to anchor the accent palette. `uploadSlot` is a `ReactNode` prop so the landing can inject the live `UploadWidget`.
 
 ### UploadWidget.tsx
-Drop zone disguised as a giant `?` block.
-- Cream paper outer card with 4px ink-black border and 4px hard shadow
-- Centerpiece: 96×96 coin-yellow `?` block with inset light/dark shadows (mimics pressed-out SNES block)
-- On hover: `question-wobble` animation. On drag-over: `block-bounce` + coin-yellow glow ring.
-- Loading state: pixel progress bar + Inky walking in the bottom-left corner
-- 3 footer badges (PRIVATE / LOCAL ONLY / ≤100MB) as small pixel pills in grass/sky/brick
-- SFX via `useSfx()`: `jump` on drop, `coin` on success, `error` on failure
+The drop zone styled as a single paper tile with a stacked-document illustration, a serif prompt ("Drop a PDF here."), mono eyebrow markers (`01 / Drop to begin`, `↓ .pdf`), and a dark ink "Choose a file" `.paper-btn`. Hover/drag-over lifts the card with a soft shadow ring. While parsing, swaps to a serif progress view with stepped "Parsing → Extracting → Preparing" messages and a forest-green progress bar. A mono proof line (`0 network requests · 0 accounts · 0 bytes logged`) sits beneath the widget. Same behavior as before: password-protected PDFs still route through `PasswordModal` via UIStore.
 
-### TrustSignals.tsx
-Three pixel badges (PRIVATE / NO UPLOADS / OPEN SOURCE).
-- Each badge = 3 spinning `.pixel-coin` sprites + label in Press Start 2P
-- Background colors: grass / sky / coin; all with 3px ink borders and 3px offset shadows
-- Staggered entrance animation
+### PaperBento.tsx
+Capabilities grid. Section header with `§ Capabilities` monospace tag, followed by a 6-column / 2-row Bento:
+- **01** Edit the original (big card, includes `MiniEditScreen` — a serif edit demo with a yellow selection highlight, a blinking `.paper-caret`, and an `EDITING · §2 Compensation` tag)
+- **02** Local-first (`0` terracotta hero numeral + shield)
+- **03** Typography (Aa specimens in forest / terracotta / plum)
+- **04** Export — vector out, not a screenshot
+- **05** Reflow — Greedy during typing, Knuth-Plass on export
 
-### FeatureCards.tsx
-"WORLD 1-1 · POWER-UP BLOCKS" — a responsive grid of 4 cards.
-- Each card is a cream paper tile with a big 72×72 pixel block icon (coin / brick / pipe / mushroom colors)
-- Hover: lift `translate(-3px, -3px)` + larger offset shadow + block-bounce animation on icon
-- Number chip (e.g. "01") in white-on-ink Press Start 2P
-- Responsive `grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))`
+### PaperPrivacyTeaser.tsx
+Two-column teaser: editorial headline ("Your file never reaches a server.") + "How it works" CTA on the left, a data-path SVG on the right (PDF → Pdfine WASM → PDF′, with a crossed-out severed server). Separated from Bento by a `§ III — Privacy, in detail` section rule.
 
-### HowItWorks.tsx
-"THREE STEPS TO VICTORY" — open / edit / export as pixel stages.
-- Each step card shows a sprite illustration: green pipe (open), brick + ? block (edit), flag (export)
-- "STAGE 01/02/03" banner floats on top-left of each card
-- Simple ▶ arrow connectors between cards on desktop
-- No orb/path animation — straightforward pixel staging
-- Sprites built from `linear-gradient` + borders (CSS pixel art, no SVG needed)
-
-### Footer.tsx
-Brick baseline + mini coin logo + copyright text.
-- Top: `.pixel-brick` textured band spanning the page
-- Logo: same mini coin-block pattern as nav
-- Body text: `var(--ink-brick-dark)` in DotGothic16/Silkscreen
+### PaperPrivacy.tsx
+Full editorial Privacy page (§ 1 Data path diagram · § 2 Technical stack · § 3 Comparison table · § 4 Verify-yourself cards). Back-to-landing buttons at the top and bottom call the `onBack` prop.
 
 ## Patterns
-- All spacing via inline `style={{}}` to avoid Tailwind v4 reset conflicts
-- CSS variables from Inkworld (see root CLAUDE.md for the full palette)
-- `IntersectionObserver` for scroll-triggered reveals (FeatureCards, HowItWorks)
-- Stepped animations with `steps(N)` timing
-- Never use rounded corners (pixel aesthetic)
-- Use `<Inky>` from `../mascot` for any character art
-- Use `useSfx()` from `../../hooks/useSfx` for sound effects
+- Scope everything inside `.paper-theme` (see `src/index.css`) so the tokens (`--p-*`, `--pdfine-mono`, `--p-serif`, `--p-sans`) are available.
+- Inline `style={{}}` for typography/spacing because Tailwind v4 resets are still global — CSS variables are the source of truth for color.
+- Serif (`var(--p-serif)` → Newsreader) for display + italic accents; body copy stays in `--p-sans` (Inter).
+- Mono eyebrows use `--pdfine-mono` at 10–11px with 0.1–0.16em tracking.
+- Card outline is always `1px solid var(--p-line)` on paper (`var(--p-paper)`) or ivory (`var(--p-bg)`). No rounded corners over 2px.
+- Buttons use the `.paper-btn` / `.paper-btn-ghost` / `.paper-btn-warm` classes from `index.css`.
+- Blinking cursors use the `.paper-caret` span.
 
 ## Dependencies
-- `core/interfaces/IEditorCore` — passed to UploadWidget
-- `store/uiStore` — error state management
-- `components/mascot` — Inky mascot
-- `hooks/useSfx` — 8-bit sound effects
-- `lucide-react` — icons (mostly retired in favor of pixel sprites; still used in Header/PropertyPanel)
-- CSS classes from `src/index.css`: `lumen-bg`, `noise-bg`, `gradient-text`, `pixel-btn`, `pixel-card`, `pixel-cloud`, `pixel-coin`, `pixel-brick`, `animate-entrance`, `progress-shimmer`
+- `core/interfaces/IEditorCore` — passed to `UploadWidget`.
+- `store/uiStore` — password modal handoff, `fileName`.
+- `lucide-react` — `Upload`, `Shield` icons.
+- CSS tokens and primitives live in `src/index.css` under `.paper-theme`, `.paper-btn*`, `.paper-input`, `.paper-eyebrow`, `.paper-caret`.

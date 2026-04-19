@@ -1,6 +1,7 @@
-import type { TextBlock, Color, TextStyle } from '../../types/document';
+import type { TextBlock, Color, TextStyle, RegisteredFont } from '../../types/document';
 import type { IFontManager } from '../interfaces/IFontManager';
 import { OVERFLOW_BORDER_COLOR } from '../../config/constants';
+import { getStandardFontSpec } from '../font/StandardFonts';
 
 function colorToCSS(color: Color): string {
   const a = color.a ?? 1;
@@ -11,33 +12,76 @@ function alignPixel(value: number, dpr: number): number {
   return Math.round(value * dpr) / dpr;
 }
 
+function numericWeight(face: FontFace): number {
+  const raw = (face.weight ?? '400').trim().toLowerCase();
+  if (raw === 'bold') return 700;
+  if (raw === 'normal' || raw === '') return 400;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 400;
+}
+
+function faceIsItalic(face: FontFace): boolean {
+  const s = (face.style ?? 'normal').trim().toLowerCase();
+  return s === 'italic' || s === 'oblique';
+}
+
 /**
  * Compute the weight and style strings to put into `ctx.font`.
  *
- * If a FontFace has been registered for this fontId (by either pdfjs or our
- * own FontManager), prefer the FontFace's own weight/style — so the browser
- * picks it as an exact match and skips `font-synthesis`. Requesting a weight
- * that doesn't match any registered face would otherwise let Chrome apply
- * faux-bold on top of an already-bold font file, making glyphs visibly
- * thicker than the pdfjs raster on edit-mode entry.
+ * Goal: when the user's requested style matches the font file's actual
+ * weight/style we use the FontFace's own descriptors so the browser picks
+ * the exact registered face — skipping `font-synthesis` and avoiding double-
+ * bold on an already-bold PDF font. When the user EXPLICITLY asked for a
+ * different weight/style (Bold / Italic toggle in the inspector), we pass
+ * the requested values and let the browser synthesize faux bold/italic on
+ * top of the registered face — otherwise clicking Bold had no visible effect
+ * because the FontFace was always registered with weight='normal' by pdfjs.
  *
- * Falls back to the run style's values when no FontFace is registered.
+ * `font.weight` on the RegisteredFont reflects the actual font file (from
+ * name / pdfjs flags / metric tables); `face.weight` on the FontFace is the
+ * CSS descriptor pdfjs used to register it (typically 'normal' regardless
+ * of the file). We compare against `font.weight` / `font.style` when we
+ * have them — that's the source of truth about whether the already-embedded
+ * glyphs are "bold enough" to satisfy the request.
  */
 function resolveFontDescriptors(
   style: TextStyle,
   face: FontFace | null,
+  registered: RegisteredFont | undefined,
 ): { ctxWeight: string; ctxStyle: string } {
-  if (face) {
-    const faceWeight = (face.weight ?? 'normal').trim();
-    const faceStyle = (face.style ?? 'normal').trim();
+  const requestBold = style.fontWeight >= 600;
+  const requestItalic = style.fontStyle === 'italic';
+
+  if (face && registered) {
+    const fileBold = registered.weight >= 600;
+    const fileItalic = registered.style === 'italic';
+    const weightMatches = requestBold === fileBold;
+    const styleMatches = requestItalic === fileItalic;
+    if (weightMatches && styleMatches) {
+      // Exact-enough match — ride the registered face, no synthesis.
+      return {
+        ctxWeight: String(numericWeight(face)),
+        ctxStyle: faceIsItalic(face) ? 'italic' : '',
+      };
+    }
+    // Mismatch — browser will look for a registered variant first, then fall
+    // back to font-synthesis. That's what makes Bold / Italic toggle visible.
     return {
-      ctxWeight: faceWeight === '' ? 'normal' : faceWeight,
-      ctxStyle: faceStyle === 'italic' || faceStyle === 'oblique' ? 'italic' : '',
+      ctxWeight: String(style.fontWeight),
+      ctxStyle: requestItalic ? 'italic' : '',
+    };
+  }
+  if (face) {
+    // No metadata about the file — conservative default: use the face's own
+    // descriptors so we don't double-synthesize.
+    return {
+      ctxWeight: String(numericWeight(face)),
+      ctxStyle: faceIsItalic(face) ? 'italic' : '',
     };
   }
   return {
     ctxWeight: String(style.fontWeight),
-    ctxStyle: style.fontStyle === 'italic' ? 'italic' : '',
+    ctxStyle: requestItalic ? 'italic' : '',
   };
 }
 
@@ -77,8 +121,13 @@ export class TextRenderer {
           // otherwise an already-bold glyph file requested via weight=700
           // would get faux-bold on top of real bold, making glyphs visibly
           // thicker than the pdfjs raster.
-          const registeredFace = this.fontManager?.getFont(glyph.style.fontId)?.fontFace ?? null;
-          const { ctxWeight, ctxStyle } = resolveFontDescriptors(glyph.style, registeredFace);
+          const registered = this.fontManager?.getFont(glyph.style.fontId);
+          const registeredFace = registered?.fontFace ?? null;
+          const { ctxWeight, ctxStyle } = resolveFontDescriptors(
+            glyph.style,
+            registeredFace,
+            registered,
+          );
 
           const fontFamily = this.resolveFontFamily(glyph.style.fontId);
           ctx.font = `${ctxStyle} ${ctxWeight} ${fontSize}px ${fontFamily}`.trim();
@@ -118,10 +167,15 @@ export class TextRenderer {
 
   /**
    * Resolve font family for rendering. Priority:
-   * 1. If the font was registered via FontFace API, use its ID directly
-   * 2. Otherwise, fall back to CSS font family heuristics
+   * 1. Curated PDF standard fonts (Helvetica / Times Roman / Courier) →
+   *    resolve to the system font stack that matches pdf-lib's StandardFonts,
+   *    so on-screen widths match what the exporter draws.
+   * 2. If the font was registered via FontFace API, use its ID directly.
+   * 3. Otherwise, fall back to CSS font family heuristics.
    */
   private resolveFontFamily(fontId: string): string {
+    const std = getStandardFontSpec(fontId);
+    if (std) return std.cssFamily;
     if (this.fontManager) {
       const font = this.fontManager.getFont(fontId);
       if (font?.fontFace) {

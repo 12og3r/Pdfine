@@ -1,10 +1,9 @@
-import { Minus, Plus, Download, ChevronLeft, Volume2, VolumeX } from 'lucide-react'
+import { Minus, Plus, Download, ChevronLeft } from 'lucide-react'
 import { Tooltip } from '../ui/Tooltip'
 import { useUIStore } from '../../store/uiStore'
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '../../config/constants'
 import type { IEditorCore } from '../../core/interfaces/IEditorCore'
-import { useExportPdf } from '../../hooks/useExportPdf'
-import { useSfx } from '../../hooks/useSfx'
+import { PaperMark } from '../landing/PaperTopBar'
 
 interface HeaderProps {
   editorCore: IEditorCore
@@ -14,228 +13,181 @@ export function Header({ editorCore }: HeaderProps) {
   const zoom = useUIStore((s) => s.zoom)
   const fileName = useUIStore((s) => s.fileName)
   const setZoom = useUIStore((s) => s.setZoom)
-  const { exportPdf, isExporting } = useExportPdf(editorCore)
-  const { play, muted, toggleMute } = useSfx()
+  const isExporting = useUIStore((s) => s.isExporting)
+  const setShowExportDialog = useUIStore((s) => s.setShowExportDialog)
 
   const handleZoomIn = () => {
     const next = Math.min(zoom + ZOOM_STEP, MAX_ZOOM)
     setZoom(next)
     editorCore.setZoom(next)
-    play('click')
   }
 
   const handleZoomOut = () => {
     const next = Math.max(zoom - ZOOM_STEP, MIN_ZOOM)
     setZoom(next)
     editorCore.setZoom(next)
-    play('click')
   }
 
   const handleBack = () => {
-    play('click')
     useUIStore.getState().setDocumentLoaded(false)
   }
 
-  const handleExport = async () => {
-    play('coin')
-    await exportPdf()
-    play('powerUp')
+  const handleExport = () => {
+    setShowExportDialog(true)
   }
 
-  const iconBtnStyle = (hover: boolean): React.CSSProperties => ({
+  const iconBtnStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     width: '32px',
     height: '32px',
-    background: hover ? 'var(--chrome-hover)' : 'transparent',
-    color: hover ? 'var(--ink-coin)' : 'var(--chrome-text)',
-    border: '2px solid var(--ink-black)',
+    background: 'transparent',
+    color: 'var(--p-ink-2)',
+    border: '1px solid var(--p-line)',
+    borderRadius: 2,
     cursor: 'pointer',
-    transition: 'all 80ms steps(2)',
-    imageRendering: 'pixelated',
-  })
+    transition: 'background 150ms, color 150ms, border-color 150ms',
+  }
+
+  const zoomBtnStyle: React.CSSProperties = {
+    width: 30,
+    height: 30,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--p-ink-2)',
+    cursor: 'pointer',
+  }
 
   return (
     <header
-      className="shrink-0 flex items-center justify-between relative z-20"
+      className="shrink-0 flex items-center justify-between relative"
       style={{
-        height: '56px',
-        background: 'var(--ink-brick-deep)',
-        borderBottom: '4px solid var(--ink-black)',
-        padding: '0 16px',
-        boxShadow: '0 4px 0 0 rgba(0,0,0,0.2)',
+        height: 64,
+        background: 'color-mix(in srgb, var(--p-bg) 92%, transparent)',
+        borderBottom: '1px solid var(--p-line)',
+        padding: '0 24px',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        zIndex: 20,
       }}
     >
-      {/* Left: Back + File name */}
-      <div className="flex items-center" style={{ minWidth: '220px', gap: '10px' }}>
-        <Tooltip content="Back to home" side="bottom" align="start">
+      {/* Left: Back + Brand + filename */}
+      <div className="flex items-center" style={{ minWidth: 260, gap: 14 }}>
+        <Tooltip content="Back to landing" side="bottom" align="start">
           <button
-            aria-label="Back to home"
-            style={iconBtnStyle(false)}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, iconBtnStyle(true))}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, iconBtnStyle(false))}
+            aria-label="Back to landing"
+            style={iconBtnStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--p-paper)'
+              e.currentTarget.style.color = 'var(--p-ink)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'var(--p-ink-2)'
+            }}
             onClick={handleBack}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft size={16} />
           </button>
         </Tooltip>
 
-        {/* Pixel logo */}
-        <div
-          style={{
-            width: '28px',
-            height: '28px',
-            background: 'var(--ink-coin)',
-            border: '2px solid var(--ink-black)',
-            boxShadow: 'inset -2px -2px 0 0 var(--ink-coin-dark), inset 2px 2px 0 0 #FFF07A',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <PaperMark />
           <span
             style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '10px',
-              color: 'var(--ink-black)',
+              fontFamily: 'var(--p-serif)',
+              fontSize: 20,
+              letterSpacing: '-0.01em',
+              color: 'var(--p-ink)',
             }}
           >
-            P
+            Pdfine
           </span>
         </div>
 
         <span
           style={{
-            color: 'var(--ink-paper)',
-            fontFamily: 'var(--font-display)',
-            fontSize: '9px',
-            letterSpacing: '0.08em',
-            maxWidth: '160px',
+            paddingLeft: 14,
+            marginLeft: 4,
+            borderLeft: '1px solid var(--p-line)',
+            fontFamily: 'var(--pdfine-mono)',
+            fontSize: 12,
+            color: 'var(--p-ink-3)',
+            letterSpacing: '0.04em',
+            maxWidth: 260,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
           title={fileName ?? undefined}
         >
-          {(fileName ?? 'UNTITLED.PDF').toUpperCase()}
+          {fileName ?? 'untitled.pdf'}
         </span>
       </div>
 
-      {/* Center: Zoom controls */}
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center">
-        <div
-          className="flex items-center"
-          style={{
-            background: 'var(--ink-brick-dark)',
-            border: '3px solid var(--ink-black)',
-          }}
-        >
-          <Tooltip content="Zoom out" side="bottom">
-            <button
-              aria-label="Zoom out"
-              style={{
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                border: 'none',
-                borderRight: '2px solid var(--ink-black)',
-                color: 'var(--ink-paper)',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--ink-coin-dark)'
-                e.currentTarget.style.color = 'var(--ink-black)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = 'var(--ink-paper)'
-              }}
-              onClick={handleZoomOut}
-            >
-              <Minus className="w-3.5 h-3.5" />
-            </button>
-          </Tooltip>
-          <span
-            className="text-center tabular-nums select-none"
-            style={{
-              color: 'var(--ink-coin)',
-              fontFamily: 'var(--font-display)',
-              fontSize: '10px',
-              minWidth: '3.5rem',
-              padding: '0 8px',
-            }}
-          >
-            {Math.round(zoom * 100)}%
-          </span>
-          <Tooltip content="Zoom in" side="bottom">
-            <button
-              aria-label="Zoom in"
-              style={{
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                border: 'none',
-                borderLeft: '2px solid var(--ink-black)',
-                color: 'var(--ink-paper)',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--ink-coin-dark)'
-                e.currentTarget.style.color = 'var(--ink-black)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = 'var(--ink-paper)'
-              }}
-              onClick={handleZoomIn}
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </Tooltip>
-        </div>
-      </div>
-
-      {/* Right: Mute + Export */}
+      {/* Center: Zoom */}
       <div
-        className="flex items-center"
-        style={{ minWidth: '220px', justifyContent: 'flex-end', gap: '12px' }}
+        className="absolute left-1/2 -translate-x-1/2 flex items-center"
+        style={{
+          border: '1px solid var(--p-line)',
+          borderRadius: 2,
+          background: 'var(--p-paper)',
+          overflow: 'hidden',
+        }}
       >
-        <Tooltip content={muted ? 'Unmute SFX' : 'Mute SFX'} side="bottom" align="end">
+        <Tooltip content="Zoom out" side="bottom">
           <button
-            aria-label={muted ? 'Unmute SFX' : 'Mute SFX'}
-            style={iconBtnStyle(false)}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, iconBtnStyle(true))}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, iconBtnStyle(false))}
-            onClick={() => {
-              toggleMute()
-              if (muted) play('coin')
-            }}
+            aria-label="Zoom out"
+            style={{ ...zoomBtnStyle, borderRight: '1px solid var(--p-line)' }}
+            onClick={handleZoomOut}
           >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            <Minus size={14} />
           </button>
         </Tooltip>
-        <button
-          className="pixel-btn"
+        <span
+          className="tabular-nums select-none"
           style={{
-            fontSize: '9px',
-            padding: '8px 14px',
-            opacity: isExporting ? 0.5 : 1,
-            pointerEvents: isExporting ? 'none' : 'auto',
+            color: 'var(--p-ink)',
+            fontFamily: 'var(--pdfine-mono)',
+            fontSize: 12,
+            minWidth: '3.25rem',
+            textAlign: 'center',
+            padding: '0 10px',
           }}
+        >
+          {Math.round(zoom * 100)}%
+        </span>
+        <Tooltip content="Zoom in" side="bottom">
+          <button
+            aria-label="Zoom in"
+            style={{ ...zoomBtnStyle, borderLeft: '1px solid var(--p-line)' }}
+            onClick={handleZoomIn}
+          >
+            <Plus size={14} />
+          </button>
+        </Tooltip>
+      </div>
+
+      {/* Right: Export */}
+      <div
+        className="flex items-center"
+        style={{ minWidth: 260, justifyContent: 'flex-end', gap: 12 }}
+      >
+        <button
+          className="paper-btn"
           onClick={handleExport}
           disabled={isExporting}
+          style={{
+            opacity: isExporting ? 0.6 : 1,
+            pointerEvents: isExporting ? 'none' : 'auto',
+          }}
         >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <Download className="w-3.5 h-3.5" />
-            {isExporting ? 'SAVING...' : 'EXPORT'}
-          </span>
+          <Download size={14} />
+          {isExporting ? 'Saving…' : 'Export PDF'}
         </button>
       </div>
     </header>

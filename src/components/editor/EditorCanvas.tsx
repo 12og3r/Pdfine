@@ -112,6 +112,15 @@ export function EditorCanvas({ editorCore }: EditorCanvasProps) {
     return () => container.removeEventListener('wheel', handleWheel)
   }, [handleWheel])
 
+  // If the pointer leaves the canvas mid-drag and releases outside, the local
+  // mouseup never fires — the editor would stay stuck in drag-select state.
+  // A window-level listener forwards those releases so the drag ends cleanly.
+  useEffect(() => {
+    const onUp = (e: MouseEvent) => editorCore.handleCanvasMouseUp(e)
+    window.addEventListener('mouseup', onUp)
+    return () => window.removeEventListener('mouseup', onUp)
+  }, [editorCore])
+
   const handleMouseDown = (e: React.MouseEvent) => {
     editorCore.handleCanvasMouseDown(e.nativeEvent)
     // Prevent canvas from stealing focus from hidden textarea during editing

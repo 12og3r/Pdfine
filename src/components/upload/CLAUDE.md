@@ -6,15 +6,15 @@ Password authentication flow for encrypted PDFs. The main drop zone lives in `co
 ## Files
 
 ### PasswordModal.tsx
-Modal dialog for unlocking encrypted PDFs — Inkworld pixel style.
-- Uses the shared pixel `Modal` primitive (coin-yellow title banner, cream paper body, 4px ink border, 8px hard shadow)
-- Info box: cream paper pill with brick icon tile and DotGothic16 body copy
-- Password input: Press Start 2P, cream background, 3px ink border, 3px offset shadow, `ENTER PASSWORD` placeholder
-- Error message: red DotGothic16 "⚠ ..." line below input
-- Two pixel buttons (Cancel / Unlock) using the shared `Button` primitive
-- Enter key submission, autofocus on open
-- Reads `pendingPdfData` from UIStore, calls `editorCore.loadPdf(data, password)`
-- Proper state cleanup on close
+Modal dialog for unlocking encrypted PDFs — Paper editorial style.
+- Uses the shared `Modal` primitive with a "Password required" eyebrow and the title "Unlock this document."
+- Info strip: forest-green accent box with a filled lock tile and Inter body copy.
+- Password input: `.paper-input` using JetBrains Mono for monospaced masked characters.
+- Error message: terracotta mono "⚠ …" line below the input.
+- Two buttons (`.paper-btn-ghost` Cancel + `.paper-btn` Unlock) aligned right.
+- Enter key submission, autofocus on open.
+- Reads `pendingPdfData` from UIStore, calls `editorCore.loadPdf(data, password)`.
+- Proper state cleanup on close.
 
 ## Flow
 ```
@@ -26,5 +26,5 @@ UploadWidget -> loadPdf() -> success -> editor
 ## Dependencies
 - `store/uiStore` — `showPasswordModal`, `pendingPdfData`
 - `core/interfaces/IEditorCore` — `loadPdf(buffer, password?)`
-- `components/ui/Modal`, `components/ui/Button`
+- `components/ui/Modal`
 - `lucide-react` — Lock icon

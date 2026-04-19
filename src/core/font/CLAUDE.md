@@ -33,6 +33,24 @@ Parses font metrics using opentype.js (lazy-loaded).
 - Default fallback: 1000 unitsPerEm, 800 ascender, -200 descender
 - xHeight/capHeight calculated from ascender if not in font tables
 
+### StandardFonts.ts
+Curated fonts exposed in the inspector dropdown. Two tiers:
+
+**Tier 1 — `pdf-standard`**: map 1-to-1 onto pdf-lib's 14 base PDF fonts. Canvas and export widths match. Ids: `std-helvetica`, `std-times-roman`, `std-courier`.
+
+**Tier 2 — `fallback`**: system / web fonts that Canvas can render with their real glyphs but pdf-lib can't natively embed. Each spec proxies to the closest StandardFonts variant for export (sans-serif → Helvetica, serif → Times Roman). Ids: `ui-arial`, `ui-georgia`, `ui-comic-sans`, `ui-inter`, `ui-open-sans`. Bold/Italic axis is preserved — bold Inter on canvas exports as Helvetica-Bold in the PDF, so weight/style survives. Widths may drift slightly between canvas and export for tier-2 fonts; for pixel-accurate widths, pick a tier-1 font.
+
+Each spec carries:
+- `id` — fontId in TextStyle.
+- `name` — display label for the font dropdown.
+- `cssFamily` — CSS font-family stack for Canvas (browser falls back through the stack if the user doesn't have a specific font installed; Inter / Open Sans are also preloaded from Google Fonts in `index.css`).
+- `pdfLibVariant(bold, italic)` — `StandardFonts` enum value the exporter embeds.
+- `kind` — `'pdf-standard' | 'fallback'`.
+
+`FontManager`'s constructor seeds its registry with all curated families via `buildStandardRegisteredFonts()` — they have no raw binary and no FontFace, just a name + id so the inspector offers them. `extractAndRegister()` re-seeds on every `loadPdf` in case `destroy()` wiped the map (StrictMode).
+
+`fontEmbedKey(fontId, bold, italic)` is the composite key shared between `FontEmbedder` and `OverlayRedrawStrategy`: curated fonts include the weight/italic axis (so Bold / Italic export correctly); all other fonts collapse to bare fontId.
+
 ### FontFallback.ts
 4-level hierarchical fallback strategy.
 1. Original font (if FontFace loaded)

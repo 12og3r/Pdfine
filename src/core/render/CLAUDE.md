@@ -15,7 +15,9 @@ Main orchestrator implementing `IRenderEngine`.
 - White overlay + canvas re-render activates when `editingBlockDirty` is true
 - White overlay padding uses `max(2, fontSize * 0.12) * scale`. Used to be `max(4, fontSize) * scale`, which for a 36pt title produced a 36 px pad that covered the first line of the following paragraph. The ascent / descent of the rendered text is already inside the block bounds, so a couple of pixels of safety for anti-aliasing is all that's needed
 - `markEditingBlockDirty()` — called by EditorCore on both edit mode entry and text changes to activate overlay rendering
-- Hover/editing highlights: renders rounded-rect backgrounds for hovered (`TEXT_HOVER_BG_COLOR`) and editing (`TEXT_EDITING_BG_COLOR`) editable text blocks
+- Hover highlight: subtle forest-green fill (`TEXT_HOVER_BG_COLOR`) for hovered editable blocks
+- Editing frame (`renderEditingFrame`): accent fill wash + dashed ink border (`EDIT_BORDER_COLOR`) + ink tag reading `EDITING · FONT · SIZE`. When `setOverflowBlockIds()` reports the block as overflowing, the frame switches to terracotta (`OVERFLOW_BORDER_COLOR`) and the tag reads `OVERFLOW · AUTO-SHRINK APPLIED`. Tag is drawn at a fixed CSS-pixel size so it stays legible at any zoom; flips below the top edge when the block is too close to the page's top
+- Font manager is stored on the engine (`setFontManager`) so `buildEditingLabel` can resolve the human-readable font name for the tag
 - `setHoveredBlockId()` / `getHoveredBlockId()` — manages hover state for text block highlighting
 
 ### PdfPageRenderer.ts
@@ -50,7 +52,7 @@ Renders SVG-style path commands (M/L/C/Z).
 Renders selection highlights and blinking cursor.
 - Selection: solid color rectangles over selected glyphs, grouped by line
 - `collectGlyphs()` accounts for `\n` between paragraphs and `\n` within runs (inter-line breaks) by inserting undefined placeholders, so selection offsets match `getTextContent()` offset space
-- Cursor: 2px vertical line with blink timer (CURSOR_BLINK_INTERVAL_MS)
+- Cursor: 2px vertical line with blink timer (`CURSOR_BLINK_INTERVAL_MS`). `startBlink(onChange)` kicks off the interval and invokes `onChange` on every phase toggle — `RenderEngine.setEditingBlockId()` wires that to its re-render callback so the caret visibly pulses. `resetBlink()` restarts from the visible phase (used by `RenderEngine.resetCursorBlink()` on cursor moves / text input so the caret doesn't flicker mid-stride). `stopBlink()` is called when edit mode exits.
 
 ### HitTester.ts
 Spatial indexing for click detection.

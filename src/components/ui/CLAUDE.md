@@ -1,65 +1,53 @@
 # components/ui
 
 ## Purpose
-Reusable, styled UI primitives used across the application. CSS variables + inline styles for all styling. All primitives follow the **Inkworld** pixel theme — hard ink-black borders, stepped offset shadows, no rounded corners, Press Start 2P for labels.
+Reusable UI primitives used across the application. All primitives follow the **Paper** editorial theme — warm ivory surfaces, hairline ink borders, Newsreader serif display, and mono eyebrows. CSS variables + inline styles for all styling.
 
 ## Files
 
 ### Button.tsx
-Multi-variant pixel button extending `ButtonHTMLAttributes`.
-- Variants:
-  - `primary` — coin-yellow background, ink-black border + shadow
-  - `secondary` (default) — cream paper background, ink-black border + shadow
-  - `ghost` — transparent background, ink-black border only
-  - `danger` — red background, cream text, ink-black border + shadow
-- Sizes: `sm` (28px), `md` (34px, default), `lg` (42px)
-- Typography: Press Start 2P, uppercase, 0.05em letter spacing
-- Press feedback: `translate(2px, 2px)` + smaller offset shadow on mousedown, restored on mouseup/leave
-- No rounded corners
+Legacy multi-variant pixel button. No longer referenced after the Paper redesign — new code uses the `.paper-btn` / `.paper-btn-ghost` / `.paper-btn-warm` classes defined in `src/index.css`. File kept intentionally in case an older flow still imports it.
 
 ### Modal.tsx
-Overlay modal with ink-toned backdrop.
-- Props: `open`, `onClose`, `title`, `children`
-- Escape key and backdrop click dismiss
-- Card: cream paper background, 4px ink-black border, 8px hard offset shadow
-- Title bar: coin-yellow banner with inset light/dark shadows (pressed SNES block style), Press Start 2P title uppercase
-- Backdrop: translucent ink black (`rgba(43, 43, 84, 0.55)`)
-- Entry: `animate-scale-up` + `animate-fade-in` (stepped)
+Centered editorial modal. Rendered via `createPortal` into `document.body` so it escapes the editor shell's `overflow: hidden` flex container — otherwise the "dialog" gets clipped and lays out inline instead of floating.
+- Props: `open`, `onClose`, `title` (ReactNode), `children`, optional `eyebrow` (defaults to "Dialog").
+- Backdrop: translucent ink with a light `backdrop-filter: blur(2px)` wash, hard-coded inline (Tailwind v4 source scanning didn't reliably emit `fixed`/`inset-0` utilities when those classes only appeared inside a portal-rendered tree).
+- Card: cream paper surface, 1px ink border, soft drop shadow, max-height-capped + vertically scrollable if content overflows.
+- Mono eyebrow + Newsreader title (28px, -0.02em tracking).
+- Locks `document.body.style.overflow = 'hidden'` while open so the page beneath can't scroll; restored on close / unmount.
+- Entry: inline `fadeIn` (backdrop) + `scaleUp` (card) keyframes.
 
 ### Tooltip.tsx
-Hover-activated pixel tooltip. Rendered via `createPortal` to `document.body` with `position: fixed` so it escapes any ancestor stacking context / clip region (the editor's `overflow: hidden` content row and sticky canvas used to clip it).
-- `side?: 'top' | 'bottom'` (default `top`) — which side of the trigger the bubble renders on. Use `bottom` for triggers near the top of the viewport (e.g. Header) so the tooltip doesn't clip above the window.
-- `align?: 'start' | 'center' | 'end'` (default `center`) — horizontal alignment relative to the trigger. Use `start` for leftmost triggers, `end` for rightmost, so a wide label doesn't clip past the viewport edge. Position is also clamped to the viewport with a 4px margin as a final safety net. Arrow is positioned to point at the trigger's horizontal center regardless of alignment.
-- Ink-black background with coin-yellow text (Press Start 2P, 9px, uppercase)
-- 2px ink border + 2px brick-dark offset shadow
-- CSS-triangle arrow points toward the trigger (down when `side=top`, up when `side=bottom`)
-- Uses `useLayoutEffect` to measure bubble + trigger and pin the bubble to viewport coordinates before paint
+Portalled hover tooltip.
+- `side?: 'top' | 'bottom'` (default `top`), `align?: 'start' | 'center' | 'end'` (default `center`).
+- Ink-coloured background (`--p-ink`), paper text (`--p-paper`), JetBrains Mono at 11px with 0.06em tracking.
+- CSS-triangle arrow points at the trigger; viewport clamping keeps corner triggers on screen.
+- Rendered via `createPortal` so it escapes ancestor `overflow: hidden`.
 
 ### ColorPicker.tsx
-Color selection with 9 Inkworld-palette presets + custom hex input.
-- Color type: `{ r, g, b }` (0-255), NOT hex strings
-- Preset colors (Ink, Brick Dark, Red, Brick, Coin, Grass, Pipe, Sky, Deep Sky)
-- Helpers: `colorToHex()`, `hexToColor()`, `colorsEqual()`
-- Each swatch: 3px ink-black border, 2px offset shadow; selected swatch has inner coin-yellow ring + lifted position
-- Native HTML color picker + pixel text input for hex values
-- Controlled component (value/onChange)
+Color selection with 9 paper-palette presets + custom hex input.
+- Color type: `{ r, g, b }` (0-255).
+- Presets: Ink, Muted, Forest, Terracotta, Mustard, Plum, Black, Slate, Red.
+- Swatches: stable 1px hairline border + outer forest-green ring via `box-shadow: 0 0 0 2px paper, 0 0 0 4px accent` when selected (keeps border width constant so sibling swatches don't shift, and the ring stays visible even on dark swatches).
+- Every interactive control calls `onMouseDown={e => e.preventDefault()}` so clicking a swatch / opening the native color input / focusing the hex text field does NOT steal focus from the hidden editing textarea — the user can keep typing right after picking a color.
+- `customHex` syncs to the incoming `value` prop via `useEffect`, so the hex field reflects the current block's colour after entering edit mode or applying a preset.
+- Controlled component.
 
 ### FontSelector.tsx
-Dropdown for selecting available fonts from EditorCore.
-- Trigger button: Press Start 2P, cream background, 3px ink border, 2px offset shadow
-- Dropdown: cream paper panel with 3px ink border + 4px offset shadow, each row separated by 2px ink divider
-- Selected row: coin-yellow background
-- Non-editable fonts show "(R/O)" suffix
-- Click-outside detection for dismissal
+Dropdown for available fonts from EditorCore.
+- Trigger button: Inter 13px, white surface, hairline border.
+- Dropdown: paper panel with a 1px ink border and a soft drop shadow; dashed dividers between rows.
+- Selected row: forest-green text on accent-2 (pale celadon) wash.
+- Non-editable fonts show a mono "(r/o)" tag.
+- Click-outside detection for dismissal.
 
 ## Patterns
-- Explicit `*Props` interface per component
-- Controlled components with `value`/`onChange` (ColorPicker, FontSelector)
-- CSS variables for all colors; use Inkworld tokens (see root CLAUDE.md)
-- Inline `style={{}}` for padding/spacing to avoid Tailwind v4 reset conflicts
-- No rounded corners, no soft shadows
-- Press Start 2P for labels and button text; always uppercase with letter spacing
-- Parameter defaults for optional props
+- Explicit `*Props` interface per component.
+- Controlled components with `value`/`onChange` (ColorPicker, FontSelector).
+- CSS variables for all colors; use Paper tokens (`--p-*`, `--pdfine-mono`).
+- Inline `style={{}}` for padding/spacing to avoid Tailwind v4 reset conflicts.
+- Radii 0–2px; no pixel drop shadows.
+- Newsreader for display, JetBrains Mono for eyebrows/metrics, Inter for body.
 
 ## Dependencies
 - `types/document` — `Color` type (ColorPicker)

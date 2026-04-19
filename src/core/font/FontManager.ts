@@ -4,6 +4,7 @@ import type { RegisteredFont } from '../../types/document'
 import { FontExtractor } from './FontExtractor'
 import { FontMetricsParser } from './FontMetrics'
 import { FontFallback } from './FontFallback'
+import { buildStandardRegisteredFonts, getStandardFontSpec, isStandardFontId } from './StandardFonts'
 import { Logger } from '../infra/Logger'
 
 const logger = new Logger('FontManager');
@@ -28,9 +29,26 @@ export class FontManager implements IFontManager {
       this.measureCanvas = document.createElement('canvas');
       this.measureCtx = this.measureCanvas.getContext('2d')!;
     }
+
+    // Seed the registry with the 14 PDF standard fonts (offered as 3 curated
+    // families in the UI). These have no raw binary — Canvas falls back to
+    // the system font stack and the exporter embeds the matching StandardFonts
+    // variant, so on-screen widths agree with pdf-lib's widths.
+    for (const font of buildStandardRegisteredFonts()) {
+      this.fonts.set(font.id, font);
+    }
   }
 
   async extractAndRegister(pdfDoc: unknown): Promise<void> {
+    // Re-seed the curated PDF standard fonts in case a previous `destroy()`
+    // cleared the map (common in React StrictMode, where `useEditorCore`'s
+    // cleanup effect fires between mount and re-mount). Without this, the
+    // inspector's Font dropdown would show only the PDF's embedded fonts
+    // after the second mount — no Helvetica / Times Roman / Courier options.
+    for (const font of buildStandardRegisteredFonts()) {
+      if (!this.fonts.has(font.id)) this.fonts.set(font.id, font);
+    }
+
     const extractedFonts = await this.fontExtractor.extractFonts(pdfDoc);
 
     for (const font of extractedFonts) {
@@ -187,6 +205,13 @@ export class FontManager implements IFontManager {
   }
 
   private buildFontString(fontId: string, fontSize: number): string {
+    // Curated PDF standard fonts — resolve directly to the system stack so
+    // Canvas measurement matches what the user will see in both the editor
+    // and the exported PDF (pdf-lib's StandardFonts share these widths).
+    if (isStandardFontId(fontId)) {
+      const spec = getStandardFontSpec(fontId);
+      if (spec) return `${fontSize}px ${spec.cssFamily}`;
+    }
     const font = this.fonts.get(fontId);
     if (font?.fontFace) {
       // Use the registered font ID directly

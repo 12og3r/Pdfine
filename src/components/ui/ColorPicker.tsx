@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Color } from '../../types/document'
 
 interface ColorPickerProps {
@@ -7,15 +7,15 @@ interface ColorPickerProps {
 }
 
 const PRESET_COLORS: Array<{ color: Color; label: string }> = [
-  { color: { r: 43, g: 43, b: 84 }, label: 'Ink' },
-  { color: { r: 140, g: 75, b: 29 }, label: 'Brick Dark' },
+  { color: { r: 34, g: 28, b: 21 }, label: 'Ink' },
+  { color: { r: 116, g: 104, b: 81 }, label: 'Muted' },
+  { color: { r: 47, g: 90, b: 63 }, label: 'Forest' },
+  { color: { r: 184, g: 92, b: 58 }, label: 'Terracotta' },
+  { color: { r: 198, g: 149, b: 69 }, label: 'Mustard' },
+  { color: { r: 107, g: 66, b: 102 }, label: 'Plum' },
+  { color: { r: 17, g: 17, b: 17 }, label: 'Black' },
+  { color: { r: 68, g: 74, b: 84 }, label: 'Slate' },
   { color: { r: 214, g: 51, b: 31 }, label: 'Red' },
-  { color: { r: 209, g: 127, b: 68 }, label: 'Brick' },
-  { color: { r: 255, g: 224, b: 69 }, label: 'Coin' },
-  { color: { r: 126, g: 200, b: 80 }, label: 'Grass' },
-  { color: { r: 80, g: 161, b: 71 }, label: 'Pipe' },
-  { color: { r: 95, g: 205, b: 228 }, label: 'Sky' },
-  { color: { r: 58, g: 123, b: 213 }, label: 'Deep Sky' },
 ]
 
 function colorToHex(c: Color): string {
@@ -37,55 +37,68 @@ function colorsEqual(a: Color, b: Color): boolean {
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [customHex, setCustomHex] = useState(colorToHex(value))
 
+  // Keep the hex input in sync with the incoming value — otherwise picking a
+  // swatch from an outside source (or entering edit mode on a block with a
+  // different colour) leaves the text field showing a stale hex code.
+  useEffect(() => {
+    setCustomHex(colorToHex(value))
+  }, [value])
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: '6px',
-        }}
-      >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: 6 }}>
         {PRESET_COLORS.map(({ color, label }) => {
           const selected = colorsEqual(value, color)
           return (
             <button
               key={label}
+              type="button"
               title={label}
+              aria-label={label}
+              aria-pressed={selected}
+              // preventDefault on mousedown keeps the hidden editing textarea
+              // focused — otherwise clicking a swatch transfers focus to the
+              // button, any subsequent key-press goes nowhere, and some
+              // browsers swallow the first click's focus transfer (producing
+              // the "two clicks to change colour" symptom).
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onChange(color)}
               style={{
                 width: '100%',
                 aspectRatio: '1',
                 backgroundColor: colorToHex(color),
-                border: '3px solid var(--ink-black)',
+                border: '1px solid var(--p-line)',
+                borderRadius: 2,
+                padding: 0,
+                // Stable 1px border + outer ring via box-shadow so selected
+                // swatches don't jitter adjacent cells, and the ring is
+                // visible against dark swatches like Ink or Black.
                 boxShadow: selected
-                  ? 'inset 0 0 0 2px var(--ink-coin), 2px 2px 0 0 var(--ink-black)'
-                  : '2px 2px 0 0 var(--ink-black)',
+                  ? '0 0 0 2px var(--p-paper), 0 0 0 4px var(--p-accent)'
+                  : 'none',
                 cursor: 'pointer',
-                transform: selected ? 'translate(-1px, -1px)' : 'translate(0, 0)',
-                transition: 'all 80ms steps(2)',
-              }}
-              onClick={() => {
-                onChange(color)
-                setCustomHex(colorToHex(color))
+                transition: 'box-shadow 120ms ease, transform 120ms ease',
               }}
             />
           )
         })}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input
           type="color"
           value={customHex}
+          onMouseDown={(e) => e.preventDefault()}
           onChange={(e) => {
             setCustomHex(e.target.value)
             onChange(hexToColor(e.target.value))
           }}
           style={{
-            width: '30px',
-            height: '30px',
-            border: '3px solid var(--ink-black)',
+            width: 30,
+            height: 30,
+            border: '1px solid var(--p-line)',
             cursor: 'pointer',
             padding: 0,
+            background: '#fff',
           }}
         />
         <input
@@ -97,16 +110,13 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               onChange(hexToColor(e.target.value))
             }
           }}
+          className="paper-input"
           style={{
             flex: 1,
-            fontSize: '10px',
-            padding: '6px 8px',
-            border: '3px solid var(--ink-black)',
-            fontFamily: 'var(--font-display)',
-            background: 'var(--ink-cloud)',
-            color: 'var(--ink-black)',
+            fontSize: 12,
+            fontFamily: 'var(--pdfine-mono)',
           }}
-          placeholder="#2B2B54"
+          placeholder="#221C15"
         />
       </div>
     </div>

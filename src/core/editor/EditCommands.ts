@@ -216,37 +216,82 @@ export function applyCommand(command: EditCommand, pages: PageModel[]): void {
   }
 }
 
-function applyStyleToRange(block: TextBlock, offset: number, length: number, style: Partial<import('../../types/document').TextStyle>): void {
-  const startLoc = getRunAtOffset(block, offset);
-  const endLoc = getRunAtOffset(block, offset + length);
+function applyStyleToRange(
+  block: TextBlock,
+  offset: number,
+  length: number,
+  style: Partial<import('../../types/document').TextStyle>,
+): void {
+  const rangeStart = offset;
+  const rangeEnd = offset + length;
+  if (rangeEnd <= rangeStart) return;
 
-  // Split runs at boundaries
-  const startPara = block.paragraphs[startLoc.paragraphIdx];
-  if (startLoc.localOffset > 0) {
-    splitRunAtOffset(startPara, startLoc.runIdx, startLoc.localOffset);
-    // Adjust: after split, target starts at next run
-    startLoc.runIdx++;
-    startLoc.localOffset = 0;
-    // Also adjust endLoc if in same paragraph
-    if (endLoc.paragraphIdx === startLoc.paragraphIdx && endLoc.runIdx >= startLoc.runIdx - 1) {
-      if (endLoc.runIdx === startLoc.runIdx - 1) {
-        endLoc.runIdx++;
-      }
-    }
-  }
-
-  const endPara = block.paragraphs[endLoc.paragraphIdx];
-  if (endLoc.localOffset > 0 && endLoc.localOffset < endPara.runs[endLoc.runIdx]?.text.length) {
-    splitRunAtOffset(endPara, endLoc.runIdx, endLoc.localOffset);
-  }
-
-  // Apply style to all runs in range
-  for (let pi = startLoc.paragraphIdx; pi <= endLoc.paragraphIdx; pi++) {
+  // Walk every run, compute its intersection with [rangeStart, rangeEnd) in
+  // the block's global text-offset space (accounting for the implicit \n
+  // between paragraphs), and apply the style to the covered slice — splitting
+  // the run when the boundary falls mid-text. This replaces the previous
+  // "split-then-iterate" implementation, which miscomputed endLoc after the
+  // start split and silently dropped the last run when the range ended at a
+  // run boundary (so Bold / colour on a whole block or across-runs selection
+  // sometimes touched nothing, sometimes touched a partial set of runs).
+  let cursor = 0;
+  for (let pi = 0; pi < block.paragraphs.length; pi++) {
+    if (pi > 0) cursor++; // \n between paragraphs
     const para = block.paragraphs[pi];
-    const riStart = pi === startLoc.paragraphIdx ? startLoc.runIdx : 0;
-    const riEnd = pi === endLoc.paragraphIdx ? endLoc.runIdx : para.runs.length;
-    for (let ri = riStart; ri < riEnd; ri++) {
-      para.runs[ri].style = { ...para.runs[ri].style, ...style };
+
+    let ri = 0;
+    while (ri < para.runs.length) {
+      const run = para.runs[ri];
+      const runStart = cursor;
+      const runEnd = runStart + run.text.length;
+      // Advance the cursor past the original run length regardless of whether
+      // we split it — the combined length of the split pieces equals the
+      // original length, so global offsets stay aligned.
+      cursor = runEnd;
+
+      // No overlap with the target range — leave the run alone.
+      if (runEnd <= rangeStart || runStart >= rangeEnd) {
+        ri++;
+        continue;
+      }
+
+      const interStart = Math.max(rangeStart, runStart);
+      const interEnd = Math.min(rangeEnd, runEnd);
+
+      // Run fully inside the range — apply in place.
+      if (interStart === runStart && interEnd === runEnd) {
+        run.style = { ...run.style, ...style };
+        ri++;
+        continue;
+      }
+
+      // Partial overlap. Split once or twice and tag the intersecting piece.
+      const startsInside = interStart > runStart;
+      const endsInside = interEnd < runEnd;
+
+      if (startsInside && endsInside) {
+        // [  run  ]  →  [before][target][after]
+        splitRunAtOffset(para, ri, interStart - runStart);
+        // After the first split: runs[ri] = before (untouched, outside range),
+        // runs[ri + 1] = the remainder with length runEnd - interStart. The
+        // intersection within the remainder lives at [0, interEnd - interStart).
+        splitRunAtOffset(para, ri + 1, interEnd - interStart);
+        // runs[ri] = before, runs[ri + 1] = target, runs[ri + 2] = after
+        para.runs[ri + 1].style = { ...para.runs[ri + 1].style, ...style };
+        ri += 3;
+      } else if (startsInside) {
+        // Range starts mid-run and extends past the run's end.
+        splitRunAtOffset(para, ri, interStart - runStart);
+        // runs[ri] = before (untouched), runs[ri + 1] = target
+        para.runs[ri + 1].style = { ...para.runs[ri + 1].style, ...style };
+        ri += 2;
+      } else {
+        // Range starts at the run's start (or earlier) and ends mid-run.
+        splitRunAtOffset(para, ri, interEnd - runStart);
+        // runs[ri] = target, runs[ri + 1] = after (untouched)
+        para.runs[ri].style = { ...para.runs[ri].style, ...style };
+        ri += 2;
+      }
     }
   }
 }

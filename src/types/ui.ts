@@ -1,4 +1,4 @@
-import type { TextStyle } from './document'
+import type { Rect, TextStyle } from './document'
 
 export type ActiveTool = 'select' | 'editText' | 'addText' | 'image' | 'draw' | 'shape';
 
@@ -47,29 +47,39 @@ export interface UIState {
   exportProgress: number;
   documentLoaded: boolean;
   showPasswordModal: boolean;
+  showExportDialog: boolean;
   pendingPdfData: ArrayBuffer | null;
   fileName: string;
 
   selectedBlockId: string | null;
   currentTextStyle: TextStyle | null;
+  currentBlockBounds: Rect | null;
   overflowWarnings: string[];
   canUndo: boolean;
   canRedo: boolean;
   isEditing: boolean;
+  /** Monotonic counter — increment to ask the hidden editing textarea to
+   *  re-focus after a DOM element (e.g. color picker, font dropdown) pulled
+   *  focus away during edit mode. */
+  editFocusTick: number;
 
   setActiveTool: (tool: ActiveTool) => void;
   setZoom: (zoom: number) => void;
   setCurrentPage: (page: number) => void;
   setDocumentLoaded: (loaded: boolean, totalPages?: number) => void;
   setShowPasswordModal: (show: boolean) => void;
+  setShowExportDialog: (show: boolean) => void;
   setPendingPdfData: (data: ArrayBuffer | null) => void;
   setFileName: (name: string) => void;
   setSelectedBlockId: (id: string | null) => void;
   setCurrentTextStyle: (style: TextStyle | null) => void;
+  setCurrentBlockBounds: (bounds: Rect | null) => void;
   setOverflowWarnings: (warnings: string[]) => void;
   setCanUndo: (canUndo: boolean) => void;
   setCanRedo: (canRedo: boolean) => void;
   setIsExporting: (exporting: boolean) => void;
   setExportProgress: (progress: number) => void;
   setIsEditing: (editing: boolean) => void;
+  /** Bump `editFocusTick` so the editing textarea re-focuses. */
+  requestEditFocus: () => void;
 }

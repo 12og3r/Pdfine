@@ -1,5 +1,6 @@
 import type { DocumentModel, ExportValidation, TextBlock } from '../../types/document'
 import type { IFontManager } from '../interfaces/IFontManager'
+import { isStandardFontId } from '../font/StandardFonts'
 
 export class ExportValidator {
   validate(model: DocumentModel, fontManager: IFontManager, modifiedBlockIds?: Set<string>): ExportValidation {
@@ -20,6 +21,14 @@ export class ExportValidator {
 
         for (const para of block.paragraphs) {
           for (const run of para.runs) {
+            // Curated fonts in our dropdown (tier-1 std and tier-2 fallback
+            // web/system fonts) all route through pdf-lib StandardFonts at
+            // export time, which support the full WinAnsi character set.
+            // `FontManager.hasGlyph` returns false for them because no
+            // FontFace is registered (they use system stacks or lazy
+            // web-font fetch), but the resulting PDF renders every ASCII
+            // character just fine. Skip the glyph check for these.
+            if (isStandardFontId(run.style.fontId)) continue;
             for (const char of run.text) {
               if (!fontManager.hasGlyph(run.style.fontId, char)) {
                 const fallbackFont = fontManager.getFallbackFont(run.style.fontId, char);

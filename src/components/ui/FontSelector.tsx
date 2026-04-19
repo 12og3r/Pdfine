@@ -29,20 +29,20 @@ export function FontSelector({ value, onChange, editorCore }: FontSelectorProps)
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
         style={{
           width: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 10px',
-          fontFamily: 'var(--font-display)',
-          fontSize: '10px',
-          color: 'var(--ink-black)',
-          background: 'var(--ink-cloud)',
-          border: '3px solid var(--ink-black)',
-          boxShadow: '2px 2px 0 0 var(--ink-black)',
+          padding: '8px 12px',
+          fontFamily: 'var(--p-sans)',
+          fontSize: 13,
+          color: 'var(--p-ink)',
+          background: '#fff',
+          border: '1px solid var(--p-line)',
           cursor: 'pointer',
-          letterSpacing: '0.03em',
         }}
         onClick={() => setOpen(!open)}
       >
@@ -53,12 +53,23 @@ export function FontSelector({ value, onChange, editorCore }: FontSelectorProps)
             whiteSpace: 'nowrap',
           }}
         >
-          {(selectedFont?.name ?? 'SELECT FONT').toUpperCase()}
+          {selectedFont?.name ?? 'Select font'}
+          {selectedFont && !selectedFont.editable && (
+            <span
+              style={{
+                marginLeft: 6,
+                fontFamily: 'var(--pdfine-mono)',
+                fontSize: 10,
+                color: 'var(--p-warm)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}
+            >
+              · read-only
+            </span>
+          )}
         </span>
-        <ChevronDown
-          className="w-4 h-4 shrink-0 ml-1"
-          style={{ color: 'var(--ink-brick-dark)' }}
-        />
+        <ChevronDown size={14} style={{ color: 'var(--p-ink-3)', flexShrink: 0, marginLeft: 6 }} />
       </button>
       {open && (
         <div
@@ -68,33 +79,34 @@ export function FontSelector({ value, onChange, editorCore }: FontSelectorProps)
             top: 'calc(100% + 4px)',
             left: 0,
             right: 0,
-            background: 'var(--ink-paper)',
-            border: '3px solid var(--ink-black)',
-            boxShadow: '4px 4px 0 0 var(--ink-black)',
-            maxHeight: '220px',
+            background: 'var(--p-paper)',
+            border: '1px solid var(--p-ink)',
+            boxShadow: '0 12px 30px -10px rgba(0,0,0,0.25)',
+            maxHeight: 220,
             overflowY: 'auto',
           }}
-          className="custom-scrollbar"
         >
           {fonts.map((font) => {
             const selected = font.id === value
             return (
               <button
                 key={font.id}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 style={{
                   width: '100%',
                   textAlign: 'left',
-                  padding: '8px 10px',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  color: selected ? 'var(--ink-black)' : 'var(--ink-brick-dark)',
-                  background: selected ? 'var(--ink-coin)' : 'transparent',
+                  padding: '10px 12px',
+                  fontFamily: 'var(--p-sans)',
+                  fontSize: 13,
+                  color: selected ? 'var(--p-accent)' : 'var(--p-ink-2)',
+                  background: selected ? 'var(--p-accent-2)' : 'transparent',
                   border: 'none',
-                  borderBottom: '2px solid var(--ink-black)',
+                  borderBottom: '1px dashed var(--p-line)',
                   cursor: 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  if (!selected) e.currentTarget.style.background = 'var(--ink-paper-dark)'
+                  if (!selected) e.currentTarget.style.background = 'var(--p-bg-2)'
                 }}
                 onMouseLeave={(e) => {
                   if (!selected) e.currentTarget.style.background = 'transparent'
@@ -104,31 +116,27 @@ export function FontSelector({ value, onChange, editorCore }: FontSelectorProps)
                   setOpen(false)
                 }}
               >
-                {font.name.toUpperCase()}
+                {font.name}
                 {!font.editable && (
                   <span
                     style={{
-                      marginLeft: '6px',
-                      fontSize: '8px',
-                      color: 'var(--ink-brick)',
+                      marginLeft: 6,
+                      fontFamily: 'var(--pdfine-mono)',
+                      fontSize: 10,
+                      color: 'var(--p-warm)',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
                     }}
                   >
-                    (R/O)
+                    (r/o)
                   </span>
                 )}
               </button>
             )
           })}
           {fonts.length === 0 && (
-            <div
-              style={{
-                padding: '10px',
-                fontFamily: 'var(--font-display)',
-                fontSize: '9px',
-                color: 'var(--ink-brick-dark)',
-              }}
-            >
-              NO FONTS AVAILABLE
+            <div style={{ padding: 12, fontSize: 13, color: 'var(--p-ink-3)' }}>
+              No fonts available
             </div>
           )}
         </div>

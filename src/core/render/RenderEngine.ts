@@ -8,7 +8,16 @@ import { SelectionRenderer } from './SelectionRenderer';
 import { HitTester } from './HitTester';
 import { OverlayManager } from './OverlayManager';
 import { PdfPageRenderer } from './PdfPageRenderer';
-import { TEXT_HOVER_BG_COLOR, TEXT_EDITING_BG_COLOR, PAGE_MARGIN } from '../../config/constants';
+import {
+  TEXT_HOVER_BG_COLOR,
+  TEXT_EDITING_BG_COLOR,
+  EDIT_BORDER_COLOR,
+  OVERFLOW_BORDER_COLOR,
+  EDIT_TAG_BG_COLOR,
+  EDIT_TAG_FG_COLOR,
+  OVERFLOW_TAG_BG_COLOR,
+  PAGE_MARGIN,
+} from '../../config/constants';
 
 export class RenderEngine implements IRenderEngine {
   private canvas: HTMLCanvasElement | null = null;
@@ -31,12 +40,21 @@ export class RenderEngine implements IRenderEngine {
   private hitTester = new HitTester();
   private overlayManager = new OverlayManager();
   private pdfPageRenderer = new PdfPageRenderer();
+  private fontManager: IFontManager | null = null;
+  private overflowBlockIds = new Set<string>();
 
   // Callback to trigger re-render when async PDF page rendering completes
   private onNeedRerender: (() => void) | null = null;
 
   setFontManager(fontManager: IFontManager): void {
+    this.fontManager = fontManager;
     this.textRenderer.setFontManager(fontManager);
+  }
+
+  /** Track which blocks currently overflow their bounds so the editing frame
+   *  can switch to the warm / "OVERFLOW" treatment. */
+  setOverflowBlockIds(ids: Iterable<string>): void {
+    this.overflowBlockIds = new Set(ids);
   }
 
   getPdfPageRenderer(): PdfPageRenderer {
@@ -61,9 +79,23 @@ export class RenderEngine implements IRenderEngine {
       if (this.editingBlockDirty) {
         this.modifiedBlockIds.add(this.editingBlockId);
       }
+      this.selectionRenderer.stopBlink();
+    }
+    if (blockId && blockId !== this.editingBlockId) {
+      // Kick off the cursor blink loop. Each toggle triggers a re-render so
+      // the cursor appears / disappears visibly in the canvas.
+      this.selectionRenderer.startBlink(() => {
+        this.onNeedRerender?.();
+      });
     }
     this.editingBlockId = blockId;
     this.editingBlockDirty = false;
+  }
+
+  /** Restart the cursor blink from the visible phase — call on cursor
+   *  movement or text input so the caret doesn't flicker mid-stride. */
+  resetCursorBlink(): void {
+    this.selectionRenderer.resetBlink();
   }
 
   /** Mark the editing block as having content changes, triggering white overlay + re-render */
@@ -191,18 +223,18 @@ export class RenderEngine implements IRenderEngine {
         );
         // Render editing highlight OVER the white overlay, UNDER the text
         if (el.id === this.editingBlockId) {
-          this.renderBlockHighlight(ctx, el, TEXT_EDITING_BG_COLOR, scale);
+          this.renderEditingFrame(ctx, el, scale);
         }
         // Render the edited text
         this.textRenderer.renderTextBlock(ctx, el, scale, this.dpr);
       }
     }
 
-    // Render editing highlight for the editing block (before content is modified)
+    // Render editing frame for the editing block (before content is modified)
     if (this.editingBlockId && !this.editingBlockDirty) {
       for (const el of page.elements) {
         if (el.type === 'text' && el.id === this.editingBlockId) {
-          this.renderBlockHighlight(ctx, el, TEXT_EDITING_BG_COLOR, scale);
+          this.renderEditingFrame(ctx, el, scale);
           break;
         }
       }
@@ -314,6 +346,81 @@ export class RenderEngine implements IRenderEngine {
 
   clearDirtyRect(): void {
     this.dirtyRect = null;
+  }
+
+  /**
+   * Draws the Paper-style editing frame: a soft accent fill, a dashed ink
+   * border, and a small "EDITING · FONT · SIZE" label tag pinned to the top
+   * of the block. When the block overflows its bounds, switches to the warm
+   * terracotta treatment with an "OVERFLOW" label.
+   */
+  private renderEditingFrame(
+    ctx: CanvasRenderingContext2D,
+    el: TextBlock,
+    scale: number
+  ): void {
+    const isOverflow = this.overflowBlockIds.has(el.id);
+    const borderColor = isOverflow ? OVERFLOW_BORDER_COLOR : EDIT_BORDER_COLOR;
+    const fillColor = isOverflow ? TEXT_EDITING_BG_COLOR : TEXT_EDITING_BG_COLOR;
+    const tagBg = isOverflow ? OVERFLOW_TAG_BG_COLOR : EDIT_TAG_BG_COLOR;
+    const tagFg = EDIT_TAG_FG_COLOR;
+
+    // Block bounds in canvas (CSS) pixels
+    const pad = 4;
+    const x = el.bounds.x * scale - pad;
+    const y = el.bounds.y * scale - pad;
+    const w = el.bounds.width * scale + pad * 2;
+    const h = el.bounds.height * scale + pad * 2;
+
+    ctx.save();
+
+    // Accent fill wash
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x, y, w, h);
+
+    // Dashed border
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.setLineDash([]);
+
+    // Label tag — rendered at a fixed CSS-pixel size so it stays legible
+    // regardless of zoom. Lives just above the top-left of the block frame,
+    // spilling into the gray gutter when there's room.
+    const label = isOverflow
+      ? 'OVERFLOW · AUTO-SHRINK APPLIED'
+      : this.buildEditingLabel(el);
+
+    ctx.font = '10px "JetBrains Mono", ui-monospace, Menlo, monospace';
+    ctx.textBaseline = 'middle';
+    const tagPadX = 7;
+    const tagH = 18;
+    const tw = ctx.measureText(label).width;
+    const tagW = Math.ceil(tw + tagPadX * 2);
+    const tagX = x;
+    let tagY = y - tagH - 2;
+    // If there's no room above (e.g. editing a block at the top of the
+    // page), tuck the tag just inside the top edge instead.
+    if (tagY < -(tagH + 8)) tagY = y + 2;
+
+    ctx.fillStyle = tagBg;
+    ctx.fillRect(tagX, tagY, tagW, tagH);
+    ctx.fillStyle = tagFg;
+    ctx.fillText(label, tagX + tagPadX, tagY + tagH / 2 + 0.5);
+
+    ctx.restore();
+  }
+
+  private buildEditingLabel(el: TextBlock): string {
+    const firstRun = el.paragraphs[0]?.runs[0];
+    if (!firstRun) return 'EDITING';
+    const style = firstRun.style;
+    const name =
+      this.fontManager?.getFont(style.fontId)?.name ?? style.fontId ?? 'Default';
+    const weight = style.fontWeight >= 700 ? ' BOLD' : '';
+    const italic = style.fontStyle === 'italic' ? ' ITALIC' : '';
+    return `EDITING · ${name.toUpperCase()}${weight}${italic} · ${Math.round(style.fontSize)}PT`;
   }
 
   private renderBlockHighlight(

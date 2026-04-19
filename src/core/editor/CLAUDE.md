@@ -7,9 +7,11 @@ Text editing engine — manages editing lifecycle, input handling, cursor/select
 
 ### EditEngine.ts
 Central orchestrator implementing `IEditEngine`. Facade coordinating all sub-managers.
-- Edit mode lifecycle: `enterEditMode(blockId)` / `exitEditMode()`
+- Edit mode lifecycle: `enterEditMode(blockId)` / `exitEditMode()`; `enterEditMode` emits both `editStart` and an initial `styleAtCursor` so the inspector panel populates the moment a block is entered.
 - Routes input events to InputHandler/ImeHandler
 - Handles keyboard shortcuts (arrows, Ctrl+Z/Y, Ctrl+B/I). Enter exits edit mode (confirms edits); Shift+Enter inserts a newline via `inputHandler.handleInsertNewline()`; Escape also exits edit mode.
+- `applyStyle(partial)` scopes to the current selection when there is one, otherwise applies to the entire editing block — matching Word/Figma conventions where toggling Bold/Italic with only a cursor updates the surrounding text.
+- `emitStyleAtCursor()` reports the run-style at `selection.startOffset` when a selection exists, otherwise at the cursor. Reading inside the selection avoids the "boundary-run" pitfall where `getRunAtOffset` prefers the next run's start when the offset lands exactly between runs — after applying a colour/size/weight to a drag-selected range, the cursor sits at that trailing boundary, so reading there would hand back the *next* (unmodified) run's style and leave the inspector showing a stale value.
 - Emits events: editStart, editEnd, textChanged, styleAtCursor, historyChanged
 
 ### CursorManager.ts
@@ -57,6 +59,7 @@ Command execution and inversion logic. All text model mutations happen here.
 - Handles paragraph splitting (newlines) and merging (cross-paragraph deletes)
 - Supports: INSERT_TEXT, DELETE_TEXT, REPLACE_TEXT, CHANGE_STYLE, BATCH
 - Maintains `pdfCharWidths` array consistency: splices on insert (NaN for new chars), delete, and run splitting
+- `applyStyleToRange` walks every run computing the intersection of `[offset, offset+length)` with each run in global text-offset space (including the implicit `\n` between paragraphs), splitting only when the boundary lands mid-run and tagging the intersecting piece with the merged style. Previous split-then-iterate logic misadjusted `endLoc` after the start split, so selections spanning runs were silently partially applied and whole-block applies skipped the final run.
 
 ### index.ts
 Barrel exports for public API.

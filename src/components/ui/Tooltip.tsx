@@ -44,8 +44,8 @@ export function Tooltip({ content, children, side = 'top', align = 'center' }: T
     borderLeft: '5px solid transparent',
     borderRight: '5px solid transparent',
     ...(side === 'top'
-      ? { top: '100%', borderTop: '5px solid var(--ink-black)' }
-      : { bottom: '100%', borderBottom: '5px solid var(--ink-black)' }),
+      ? { top: '100%', borderTop: '5px solid var(--p-ink)' }
+      : { bottom: '100%', borderBottom: '5px solid var(--p-ink)' }),
   }
   // Arrow horizontal position tracks the trigger center, not the bubble, so
   // corner alignments still point at the right element.
@@ -75,17 +75,17 @@ export function Tooltip({ content, children, side = 'top', align = 'center' }: T
               left: pos?.left ?? -9999,
               zIndex: 9999,
               padding: '6px 10px',
-              fontSize: '9px',
-              background: 'var(--ink-black)',
-              color: 'var(--ink-coin)',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '0.05em',
-              border: '2px solid var(--ink-black)',
-              boxShadow: '2px 2px 0 0 var(--ink-brick-dark)',
+              fontSize: 11,
+              background: 'var(--p-ink)',
+              color: 'var(--p-paper)',
+              fontFamily: 'var(--pdfine-mono)',
+              letterSpacing: '0.06em',
+              borderRadius: 2,
+              boxShadow: '0 8px 18px -6px rgba(0,0,0,0.3)',
               visibility: pos ? 'visible' : 'hidden',
             }}
           >
-            {content.toUpperCase()}
+            {content}
             <div style={arrowStyle} />
           </div>,
           document.body,

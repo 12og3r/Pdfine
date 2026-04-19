@@ -9,6 +9,11 @@ interface TextEditInputProps {
 export function TextEditInput({ editorCore }: TextEditInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isEditing = useUIStore((s) => s.isEditing)
+  // editFocusTick is a counter bumped by `uiStore.requestEditFocus()` — any
+  // panel interaction that may have stolen focus from the textarea (color
+  // picker, font dropdown, numeric size input) calls it, re-running this
+  // effect and restoring focus so typing resumes immediately.
+  const editFocusTick = useUIStore((s) => s.editFocusTick)
 
   useEffect(() => {
     if (!isEditing) return
@@ -16,7 +21,7 @@ export function TextEditInput({ editorCore }: TextEditInputProps) {
     if (textarea) {
       textarea.focus({ preventScroll: true })
     }
-  }, [isEditing])
+  }, [isEditing, editFocusTick])
 
   if (!isEditing) return null
 
