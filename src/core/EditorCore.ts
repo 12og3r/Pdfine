@@ -602,10 +602,22 @@ export class EditorCore implements IEditorCore {
   // =============== Internal ===============
 
   /**
-   * Adjust text block bounds.y to use font ascender instead of fontSize.
-   * TextBlockBuilder sets bounds.y = baseline - fontSize (approximate text top),
-   * but the actual visual top is baseline - ascent. The difference causes
-   * Canvas fillText to render vertically offset from pdfjs rasterization.
+   * Align each text block's `bounds.y` with `baseline - ascent`, so Canvas
+   * `fillText` lands exactly on the pdfjs raster's baseline when edit-mode
+   * entry flips from raster to canvas redraw.
+   *
+   * `TextBlockBuilder` sets `bounds.y = min(item.y - item.height)` and
+   * records the first-line baseline on `block.firstBaselineY`. pdfjs's
+   * `textItem.height` is the glyph bbox height, which is frequently a pixel
+   * or two different from `fontSize` (CJK-capable faces, display fonts,
+   * condensed variants). Without using the stored baseline, we'd land at
+   * `baseline - ascent + (fontSize - item.height)` — the block visibly
+   * jumps on double-click and the white overlay (sized against the shifted
+   * bounds) no longer fully covers the raster, leaving a ghost that reads
+   * as the text getting heavier.
+   *
+   * For programmatically-created blocks that never went through the parser
+   * (e.g. `addTextBlock`), fall back to the `fontSize - ascent` approximation.
    */
   private adjustBoundsToFontAscent(doc: DocumentModel): void {
     for (const page of doc.pages) {
@@ -615,10 +627,18 @@ export class EditorCore implements IEditorCore {
         if (!firstRun) continue
         const { fontSize, fontId } = firstRun.style
         const ascent = this.fontManager.getAscent(fontId, fontSize)
-        const offset = fontSize - ascent
-        if (Math.abs(offset) < 0.1) continue
-        el.bounds = { ...el.bounds, y: el.bounds.y + offset, height: el.bounds.height - offset }
-        el.originalBounds = { ...el.originalBounds, y: el.originalBounds.y + offset, height: el.originalBounds.height - offset }
+
+        let shift: number
+        if (el.firstBaselineY !== undefined) {
+          const targetY = el.firstBaselineY - ascent
+          shift = targetY - el.bounds.y
+        } else {
+          shift = fontSize - ascent
+        }
+
+        if (Math.abs(shift) < 0.1) continue
+        el.bounds = { ...el.bounds, y: el.bounds.y + shift, height: el.bounds.height - shift }
+        el.originalBounds = { ...el.originalBounds, y: el.originalBounds.y + shift, height: el.originalBounds.height - shift }
       }
     }
   }

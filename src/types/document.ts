@@ -74,6 +74,15 @@ export interface TextBlock {
   paragraphs: Paragraph[];
   editable: boolean;
   overflowState: OverflowState;
+  /** Baseline Y of the first line of the first paragraph in the source PDF,
+   *  in layout (top-left origin) coordinates. Captured by `TextBlockBuilder`
+   *  so `EditorCore.adjustBoundsToFontAscent` can align bounds.y with the
+   *  actual first-line baseline instead of assuming `bounds.y = baseline -
+   *  fontSize`. pdfjs reports `textItem.height` as the glyph bbox height,
+   *  which for many fonts (CJK / condensed / display) differs from fontSize
+   *  — without this field the edit-mode canvas redraw lands
+   *  `(fontSize - item.height)` px off the pdfjs raster's baseline. */
+  firstBaselineY?: number;
 }
 
 export type OverflowState =
@@ -93,6 +102,15 @@ export interface Paragraph {
   alignment: 'left' | 'center' | 'right' | 'justify';
   lineSpacing: number;
   pdfLineHeight?: number;  // actual baseline-to-baseline distance from PDF coordinates
+  /** First line's baseline Y in layout (top-left origin) coordinates, as
+   *  observed in the source PDF. `LayoutEngine.reflowTextBlock` uses this
+   *  to anchor each paragraph's first line at its original PDF baseline
+   *  instead of stacking formula-based line heights — single-line
+   *  paragraphs have no `pdfLineHeight`, so the formula
+   *  (`fontSize * lineSpacing`) can be a few px shorter than the actual
+   *  PDF inter-paragraph gap, and every paragraph after the first drifts
+   *  upward on edit-mode entry (visible as the block "jumping up"). */
+  firstBaselineY?: number;
   lines?: LayoutLine[];
 }
 

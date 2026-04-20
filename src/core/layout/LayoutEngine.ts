@@ -29,9 +29,27 @@ export class LayoutEngine implements ILayoutEngine {
     const isSingleLine = block.originalBounds.height < (block.paragraphs[0]?.runs[0]?.style.fontSize ?? 12) * 1.8;
     const maxWidth = (options?.autoGrow && isSingleLine) ? Infinity : block.bounds.width;
 
-    // Layout each paragraph
+    // Layout each paragraph. When the parser captured per-paragraph
+    // `firstBaselineY`, anchor each paragraph's first line at
+    // `paragraph.firstBaselineY - block.firstBaselineY` so the rendered
+    // baselines land exactly where they did in the source PDF — single-
+    // line paragraphs without `pdfLineHeight` would otherwise use the
+    // formula-based `fontSize * lineSpacing` inter-line gap, which for
+    // a 9 pt font is 10.8 px even though the actual PDF gap between
+    // rows is often 13.5 px. Every paragraph after the first accumulates
+    // this ~2.7 px error upward, visible as the whole block jumping up
+    // on edit-mode entry (reproduced in the "TikTok Pte. Ltd." block on
+    // the SGP employment certificate).
     let currentY = 0;
-    const paragraphs = block.paragraphs.map(paragraph => {
+    const blockBaselineY = block.firstBaselineY;
+    const paragraphs = block.paragraphs.map((paragraph, idx) => {
+      if (
+        idx > 0 &&
+        paragraph.firstBaselineY !== undefined &&
+        blockBaselineY !== undefined
+      ) {
+        currentY = paragraph.firstBaselineY - blockBaselineY;
+      }
       const lines = this.paragraphLayout.layoutParagraph(
         paragraph, maxWidth, fontManager, lineBreaker, currentY,
       );
@@ -80,7 +98,14 @@ export class LayoutEngine implements ILayoutEngine {
     // If auto-shrunk, we need to re-layout with the adjusted paragraphs
     if (updatedBlock.overflowState.status === 'auto_shrunk') {
       currentY = 0;
-      const relaidParagraphs = updatedBlock.paragraphs.map(paragraph => {
+      const relaidParagraphs = updatedBlock.paragraphs.map((paragraph, idx) => {
+        if (
+          idx > 0 &&
+          paragraph.firstBaselineY !== undefined &&
+          blockBaselineY !== undefined
+        ) {
+          currentY = paragraph.firstBaselineY - blockBaselineY;
+        }
         const lines = this.paragraphLayout.layoutParagraph(
           paragraph, maxWidth, fontManager, lineBreaker, currentY,
         );

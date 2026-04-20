@@ -213,4 +213,4 @@ All frontend UI uses the **Paper** design system defined in `src/index.css`. An 
 - Only TrueType/OpenType fonts are editable (Type1/CIDFont fall back to system fonts)
 - Text aggregation is heuristic-based (may fail on complex multi-column layouts)
 - Canvas rendering has ±1-2px subpixel variance
-- On edit mode entry, text block bounds are adjusted (fontSize→ascent) to minimize vertical shift between pdfjs raster and Canvas fillText rendering
+- On PDF load, text block bounds.y is aligned to `firstBaselineY - ascent` (the first line's baseline captured by `TextBlockBuilder`) so Canvas fillText lands on the pdfjs raster's baseline on edit-mode entry. Programmatically-created blocks without `firstBaselineY` fall back to the `fontSize - ascent` approximation, which is only exact when pdfjs's `item.height == fontSize`

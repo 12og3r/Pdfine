@@ -14,6 +14,7 @@ Central manager implementing `IFontManager`.
 - `getFallbackFont(fontId, char)` — finds substitute font
 - Three caches: char widths, text measurements, metrics
 - Registers fonts with browser's FontFace API
+- `getFont(fontId)` does a **lazy `document.fonts` re-scan** when the stored entry has no `fontFace`. pdfjs v5 auto-registers embedded TrueType/OpenType fonts asynchronously during `page.getOperatorList()`; the `document.fonts.add(face)` sometimes lands after `FontExtractor`'s snapshot, leaving us with a RegisteredFont whose `fontFace` is undefined. Without the lazy re-scan, `TextRenderer.resolveFontFamily` falls through to `mapFontFamily`, which maps internal-looking ids (`g_d0_f1`, etc.) to `sans-serif` — so double-clicking a block like "TikTok Pte. Ltd." makes Canvas paint the edit-mode glyphs in the system sans-serif, the text visibly jumps upward (sans-serif's ascent at the same fontSize is smaller than the embedded face, so `bounds.y + ascent` lands above the raster baseline), and the whole block's face/weight appears to change. The rescan caches the match and marks the font editable so subsequent renders see the real face directly
 
 ### FontExtractor.ts
 Extracts font data from PDF documents via pdf.js APIs.

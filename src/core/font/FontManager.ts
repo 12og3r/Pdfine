@@ -84,7 +84,37 @@ export class FontManager implements IFontManager {
   }
 
   getFont(fontId: string): RegisteredFont | undefined {
-    return this.fonts.get(fontId);
+    const font = this.fonts.get(fontId);
+    if (font && !font.fontFace && typeof document !== 'undefined' && document.fonts) {
+      // pdfjs v5 registers embedded TrueType/OpenType fonts with the
+      // browser's FontFace API under `loadedName`, but `document.fonts.add`
+      // fires asynchronously — it may land AFTER our `FontExtractor`
+      // snapshot of `document.fonts` at `extractAndRegister` time. When it
+      // does, the font enters our registry with `fontFace: undefined`,
+      // `TextRenderer.resolveFontFamily` falls through to
+      // `mapFontFamily`, and internal-looking ids (`g_d0_f1`, etc.) get
+      // mapped to the generic `sans-serif` stack. The result on
+      // edit-mode entry is that Canvas paints the block in the system
+      // sans-serif — visible to the user as the font / weight changing
+      // and the baseline jumping upward (sans-serif's ascent is usually
+      // less than the original embedded face, so `bounds.y + ascent`
+      // lands above the pdfjs raster's baseline). Rescan document.fonts
+      // lazily here and cache the match so `renderTextBlock` sees the
+      // real face once it's loaded.
+      try {
+        const fonts = document.fonts as unknown as Iterable<FontFace>
+        for (const ff of fonts) {
+          if (ff.family === fontId && ff.status === 'loaded') {
+            font.fontFace = ff;
+            font.editable = true;
+            break;
+          }
+        }
+      } catch {
+        // document.fonts may not be iterable in some environments — ignore.
+      }
+    }
+    return font;
   }
 
   getMetrics(fontId: string): FontMetrics | null {

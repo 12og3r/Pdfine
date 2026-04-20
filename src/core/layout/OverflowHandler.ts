@@ -156,7 +156,23 @@ export class OverflowHandler {
     lineBreaker: LineBreaker,
   ): number {
     let y = 0;
-    for (const paragraph of paragraphs) {
+    // Mirror `LayoutEngine.reflowTextBlock`'s baseline-anchored paragraph
+    // stacking so overflow detection uses the same y advance that the
+    // render pipeline will use. Without this, single-line paragraphs use
+    // the formula-based gap (`fontSize * lineSpacing`) here while the
+    // engine uses per-paragraph `firstBaselineY` — the two disagree by a
+    // few px per paragraph and false-positive overflow can trigger on
+    // load.
+    const blockBaselineY = paragraphs[0]?.firstBaselineY;
+    for (let idx = 0; idx < paragraphs.length; idx++) {
+      const paragraph = paragraphs[idx];
+      if (
+        idx > 0 &&
+        paragraph.firstBaselineY !== undefined &&
+        blockBaselineY !== undefined
+      ) {
+        y = paragraph.firstBaselineY - blockBaselineY;
+      }
       const lines = this.paragraphLayout.layoutParagraph(paragraph, maxWidth, fontManager, lineBreaker, y);
       if (lines.length > 0) {
         const lastLine = lines[lines.length - 1];

@@ -79,6 +79,23 @@ function resolveFontDescriptors(
       ctxStyle: faceIsItalic(face) ? 'italic' : '',
     };
   }
+  if (registered) {
+    // No browser FontFace — e.g. pdfjs rendered this font via its internal
+    // compiledGlyphs / Type-3 pipeline and never handed us binary data to
+    // register. Canvas will fall back to a system font. Drive weight /
+    // italic from the registered metadata (derived from the real font
+    // name, `BAAAAA+Roboto-Bold` → weight 700), so the browser synthesizes
+    // bold / italic on the fallback family. Without this, a PDF bold run
+    // whose `style.fontWeight` is still the parser's default 400 (pdfjs
+    // surfaces only the `loadedName` like `g_d0_f2` at getTextContent
+    // time, not the underlying face) renders *regular* weight on edit-
+    // mode entry — the user sees the block suddenly un-bold itself.
+    const regBold = registered.weight >= 600;
+    return {
+      ctxWeight: String(regBold ? Math.max(style.fontWeight, registered.weight) : style.fontWeight),
+      ctxStyle: registered.style === 'italic' || requestItalic ? 'italic' : '',
+    };
+  }
   return {
     ctxWeight: String(style.fontWeight),
     ctxStyle: requestItalic ? 'italic' : '',
@@ -171,7 +188,17 @@ export class TextRenderer {
    *    resolve to the system font stack that matches pdf-lib's StandardFonts,
    *    so on-screen widths match what the exporter draws.
    * 2. If the font was registered via FontFace API, use its ID directly.
-   * 3. Otherwise, fall back to CSS font family heuristics.
+   * 3. If we have the real font family name from FontExtractor (e.g.
+   *    "Roboto", "Calibri") but no FontFace — pdfjs renders this font via
+   *    its internal compiled glyphs pipeline and never handed us binary
+   *    data — lead the CSS stack with the real family name so the user's
+   *    system picks up an installed copy (Roboto is preloaded by many
+   *    sites / installed on Android / available via Google Fonts) and
+   *    otherwise falls through to the category-appropriate sans-serif.
+   *    Without this, Canvas lands on bare "sans-serif" for internal
+   *    pdfjs ids (`g_d0_f*`), producing the visible font change users
+   *    see when double-clicking e.g. "TikTok Pte. Ltd.".
+   * 4. Otherwise, fall back to CSS font family heuristics.
    */
   private resolveFontFamily(fontId: string): string {
     const std = getStandardFontSpec(fontId);
@@ -182,8 +209,22 @@ export class TextRenderer {
         // Font was extracted from PDF and registered with the browser — use it directly
         return `"${fontId}", sans-serif`;
       }
+      if (font?.family && font.family !== fontId && !this.isInternalPdfName(font.family)) {
+        return `"${font.family}", ${this.mapFontFamily(fontId)}`;
+      }
     }
     return this.mapFontFamily(fontId);
+  }
+
+  /** `font.family` comes from `FontExtractor.extractFamily(fontData.name)`
+   *  which strips the subset prefix and style suffix — for real fonts this
+   *  yields "Roboto" / "Calibri" / etc. But when pdfjs didn't surface a
+   *  real name at all, the family can end up matching the internal id
+   *  pattern (e.g. `g_d0_f2`). Skip leading that into the CSS stack so we
+   *  don't just repeat the id that Canvas has no FontFace for. */
+  private isInternalPdfName(name: string): boolean {
+    const lower = name.toLowerCase();
+    return lower.startsWith('g_') || lower.includes('_f') || /^[a-z]\d/.test(lower);
   }
 
   /**

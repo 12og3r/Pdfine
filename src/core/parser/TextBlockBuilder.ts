@@ -203,6 +203,7 @@ export class TextBlockBuilder {
             }
             const para = createParagraph(currentRuns, this.detectAlignment(currentParaLines), DEFAULT_LINE_SPACING);
             para.pdfLineHeight = this.computePdfLineHeight(currentLineYs);
+            para.firstBaselineY = currentLineYs[0];
             paragraphs.push(para);
             currentRuns = [];
             currentLineYs = [];
@@ -294,6 +295,7 @@ export class TextBlockBuilder {
       }
       const para = createParagraph(currentRuns, this.detectAlignment(currentParaLines), DEFAULT_LINE_SPACING);
       para.pdfLineHeight = this.computePdfLineHeight(currentLineYs);
+      para.firstBaselineY = currentLineYs[0];
       paragraphs.push(para);
     }
 
@@ -302,7 +304,16 @@ export class TextBlockBuilder {
       paragraphs.push(createParagraph([createTextRun('', createTextStyle({ fontId: 'default', fontSize: 12 }))], 'left', DEFAULT_LINE_SPACING));
     }
 
-    return createTextBlock(paragraphs, bounds, group.editable);
+    const block = createTextBlock(paragraphs, bounds, group.editable);
+    // Remember where the PDF's first line actually sat so
+    // `EditorCore.adjustBoundsToFontAscent` can align bounds.y to
+    // `baseline - ascent` without assuming `item.height == fontSize`
+    // (pdfjs reports item.height as the glyph bbox height, and for
+    // several common fonts that's a pixel or two taller/shorter than
+    // fontSize — enough to make the canvas redraw visibly jump on
+    // edit-mode entry).
+    block.firstBaselineY = group.lines[0]?.y;
+    return block;
   }
 
   /**
