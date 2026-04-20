@@ -162,26 +162,21 @@ export class ParagraphLayout {
    * Convert a single source character into a CharInfo for layout.
    *
    * The parser inserts '\n' between PDF lines (TextBlockBuilder) to mark where
-   * the original PDF's text engine wrapped the paragraph. In the PDF itself
-   * those line breaks encode an implicit word separator — the reader sees
-   * "...Integer" at end of line N and "odio..." at start of line N+1 as a
-   * word boundary, not a concatenation. But the '\n' character has zero
-   * drawable width and no semantics to Canvas/pdf-lib, so when the layout
-   * re-flows content across a '\n' boundary (after an edit) the two words
-   * end up visually glued ("Integernec"). Map '\n' to a real space here
-   * so the layout, measurement, rendering, and export pipelines all treat
-   * it as a word separator with natural canvas-measured space width. Leaves
-   * `run.text` untouched — paragraph-level newlines (hard breaks from Enter)
-   * live between paragraphs in the DocumentModel, not inside a run.
+   * the original PDF's text engine wrapped the paragraph. GreedyLineBreaker
+   * treats that '\n' as a hard break so each PDF row stays on its own canvas
+   * line — otherwise multi-row blocks collapse on edit-mode entry (the next
+   * PDF row gets packed onto the preceding short row). '\n' is kept verbatim
+   * here; it has zero drawable width in TextMeasurer.measureChar and gets
+   * trimmed from the end of every laid-out line by layoutParagraph's
+   * trailing-whitespace trim, so it never reaches positionGlyphs for render.
+   * User-typed newlines create a new Paragraph in EditCommands, not a '\n'
+   * inside a run, so they are unaffected by this handling.
    */
   private charInfoFor(
     char: string,
     style: TextStyle,
     pdfWidth: number | undefined,
   ): CharInfo {
-    if (char === '\n') {
-      return { char: ' ', style, pdfWidth: undefined };
-    }
     return { char, style, pdfWidth };
   }
 

@@ -51,15 +51,22 @@ export class GreedyLineBreaker {
       const letterSpacing = style.letterSpacing ?? 0;
       const charWidth = this.measurer.measureChar(char, style.fontId, style.fontSize, fontManager, letterSpacing, pdfWidth);
 
-      // '\n' inside a run is the parser's inter-line-join marker — it comes
-      // from PDF-internal algorithmic line wrapping (see
-      // core/parser/TextBlockBuilder.ts), NOT a semantic hard break. Treat it
-      // as a zero-width BREAK OPPORTUNITY: the paragraph can break here if it
-      // overflows, but must not force a break when the content would otherwise
-      // fit. Forcing a break orphans trailing words when an edit slightly
-      // widens an earlier line (e.g. 'ipsum' → 'Apsum' orphaning 'nec').
+      // '\n' inside a run is the parser's inter-line-join marker placed at
+      // every PDF-internal line boundary (see core/parser/TextBlockBuilder).
+      // User-typed newlines create a new Paragraph (see
+      // core/editor/EditCommands), so any '\n' we see here came from the PDF
+      // and IS a line boundary we must preserve — force a hard break.
+      //
+      // Treating it as a soft break collapsed multi-row "label: value" blocks
+      // on edit-mode entry: because bounds.width = width of the widest PDF
+      // row, the greedy packer would swallow the next short row onto the
+      // preceding line ("Employee Name: Guan Zhenzhi NRIC/FIN …"). A hard
+      // break at '\n' keeps every PDF row on its own canvas line.
       if (char === '\n') {
-        lastBreakOpportunity = i;
+        breaks.push(i + 1);
+        lineStart = i + 1;
+        lineWidth = 0;
+        lastBreakOpportunity = -1;
         continue;
       }
 
