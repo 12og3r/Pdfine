@@ -65,13 +65,35 @@ export function PaperTopBar({ onBrandClick }: PaperTopBarProps) {
   )
 }
 
-export function PaperMark() {
+interface PaperMarkProps {
+  size?: number
+}
+
+export function PaperMark({ size = 26 }: PaperMarkProps) {
+  const height = size
+  const width = Math.round(size * (32 / 28))
   return (
-    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden>
-      <rect x="4" y="2" width="16" height="22" rx="1" fill="var(--p-paper)" stroke="var(--p-ink)" strokeWidth="1.2" />
-      <path d="M20 2v4h-4" fill="none" stroke="var(--p-ink)" strokeWidth="1.2" />
-      <path d="M8 11h8M8 14h6M8 17h8" stroke="var(--p-ink-3)" strokeWidth="1" />
-      <circle cx="20" cy="20" r="4" fill="var(--p-accent)" />
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 32 28"
+      aria-hidden
+      style={{ display: 'block' }}
+    >
+      <text
+        x="14"
+        y="22"
+        textAnchor="middle"
+        fontFamily="Newsreader, 'Iowan Old Style', Georgia, serif"
+        fontSize="28"
+        fontStyle="italic"
+        fontWeight="500"
+        fill="var(--p-ink)"
+      >
+        P
+      </text>
+      <circle cx="24.5" cy="21" r="1.8" fill="var(--p-warm)" />
+      <rect x="5" y="24.5" width="22" height="1.4" fill="var(--p-accent)" />
     </svg>
   )
 }

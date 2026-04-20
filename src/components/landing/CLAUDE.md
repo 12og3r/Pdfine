@@ -9,7 +9,7 @@ Editorial "Paper" landing surface: a warm ivory paper world with a Newsreader se
 Top-level landing orchestrator. Holds a local `page: 'landing' | 'privacy'` switch so the Privacy deep-dive can live in the same pre-document-loaded surface. Wraps everything in a `.paper-theme` root and wires `<PaperHero/>` → `<PaperBento/>` → `<PaperPrivacyTeaser/>`. Receives `editorCore` and passes it to `UploadWidget`. Adds document-level `dragover`/`drop` suppression so stray files don't navigate away.
 
 ### PaperTopBar.tsx
-Sticky topbar (serif wordmark, mini "Pdfine" mark, v1.0 mono eyebrow, Features/Github nav). Brand click returns to the landing view. Exports `PaperMark` — a 26px paper sheet + green coin SVG — reused by `Header` in the editor and by the mobile warning.
+Sticky topbar (serif wordmark, mini "Pdfine" mark, v1.0 mono eyebrow, Features/Github nav). Brand click returns to the landing view. Exports `PaperMark` — an italic Newsreader "P" on a forest-green baseline with a terracotta period (defaults to 26px, `size` prop for larger surfaces, 32×28 viewBox) — reused by `Header` in the editor and by the mobile warning. Same mark also ships as `/public/favicon.svg` for the browser tab.
 
 ### PaperHero.tsx
 Pill ("Privacy is the feature · READ MORE") + giant Newsreader headline ("Edit PDFs, / on your own machine.") + centered upload slot + an editorial "Scroll · Capabilities below" hint. The headline colors "on your own" forest green and "machine" terracotta to anchor the accent palette. `uploadSlot` is a `ReactNode` prop so the landing can inject the live `UploadWidget`.
